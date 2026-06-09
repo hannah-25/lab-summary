@@ -1,0 +1,14 @@
+{
+  "name": "trinity-lab-summary",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node src/capture.mjs",
+    "batch": "node src/batch.mjs",
+    "reprocess": "node src/reprocess.mjs",
+    "test": "node src/test.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.53.0"
+  }
+}
