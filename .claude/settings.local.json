@@ -19,7 +19,8 @@
       "Bash(echo \"exit: $?\")",
       "Bash(git push *)",
       "Bash(dir D:\\\\hannah-dev\\\\새 폴더\\\\lab_summary\\\\node *)",
-      "PowerShell(git add *)"
+      "PowerShell(git add *)",
+      "PowerShell(git checkout *)"
     ]
   }
 }
