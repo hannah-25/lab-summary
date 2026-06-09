@@ -218,14 +218,17 @@ try {
       const foundSputum = new Set();
       const foundStool = new Set();
       const foundBloodCulture = new Set();
+      let lastCollectedDate = null;
       console.log(`  상세 결과 ${sortedRows.length}건`);
       for (const [detailIndex, resultRow] of sortedRows.entries()) {
         const satisfied = isMicro
           ? foundVre.size >= 3 && foundSputum.size >= 1 && foundStool.size >= 1 && foundBloodCulture.size >= 1
           : foundBloodUa.size >= 2;
         if (satisfied) {
-          console.log(`  → 나머지 ${sortedRows.length - detailIndex}건 건너뜀`);
-          break;
+          if (isMicro || resultRow.DAT !== lastCollectedDate) {
+            console.log(`  → 나머지 ${sortedRows.length - detailIndex}건 건너뜀`);
+            break;
+          }
         }
         const etcinf = String(resultRow.ETCINF || "");
         if (etcinf) {
@@ -265,10 +268,15 @@ try {
             }
             collectedRows.push(...groups.unclassified);
           } else {
+            if (groups.bloodCulture.length > 0) {
+              console.log(`  ${detailIndex + 1}/${sortedRows.length} 건너뜀 (혈액배양 포함)`);
+              continue;
+            }
             if (groups.blood.length > 0 || groups.urine.length > 0) {
               foundBloodUa.add(jno);
             }
             collectedRows.push(...groups.blood, ...groups.urine, ...groups.unclassified);
+            lastCollectedDate = resultRow.DAT;
           }
           console.log(`  ${detailIndex + 1}/${sortedRows.length} 완료`);
           await new Promise((resolve) => setTimeout(resolve, 500));

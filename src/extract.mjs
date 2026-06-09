@@ -99,8 +99,6 @@ export function extractLabRows(payload, sourceUrl = "") {
           const row = appendRow(item, activeParent);
           if (row?.result === "**") {
             activeParent = row.name;
-          } else if (row?.code) {
-            activeParent = "";
           }
           for (const child of Object.values(item)) extractNode(child);
         } else {
