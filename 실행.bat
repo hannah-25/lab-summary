@@ -40,11 +40,11 @@ echo.
 set /p subChoice=검사 종류 선택 (1 또는 2): 
 echo.
 if "%subChoice%"=="1" (
-    npm.cmd run capture
+    node src\capture.mjs
     goto end
 )
 if "%subChoice%"=="2" (
-    npm.cmd run capture-micro
+    node src\capture.mjs --micro
     goto end
 )
 echo 잘못된 입력입니다. 1 또는 2를 입력하세요.
@@ -58,11 +58,11 @@ echo.
 set /p subChoice=검사 종류 선택 (1 또는 2): 
 echo.
 if "%subChoice%"=="1" (
-    npm.cmd run batch
+    node src\batch.mjs
     goto end
 )
 if "%subChoice%"=="2" (
-    npm.cmd run batch-micro
+    node src\batch.mjs --micro
     goto end
 )
 echo 잘못된 입력입니다. 1 또는 2를 입력하세요.
