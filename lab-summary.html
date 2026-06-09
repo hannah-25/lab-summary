@@ -669,16 +669,43 @@
       viewerPatients = Array.isArray(data.patients) ? data.patients : [];
       if (!viewerPatients.length) throw new Error("환자 결과가 없습니다.");
 
+      // 오늘 결과 환자를 앞으로 정렬
+      viewerPatients = [
+        ...viewerPatients.filter((p) => p.isNewToday),
+        ...viewerPatients.filter((p) => !p.isNewToday)
+      ];
+
+      const todayCount = viewerPatients.filter((p) => p.isNewToday).length;
       const select = $("patientSelect");
       select.replaceChildren();
-      viewerPatients.forEach((patient, index) => {
-        const option = document.createElement("option");
-        option.value = String(index);
-        option.textContent = `${patient.name}${patient.chartNo ? ` (${patient.chartNo})` : ""}`;
-        select.append(option);
-      });
+
+      if (todayCount > 0) {
+        const todayGroup = document.createElement("optgroup");
+        todayGroup.label = `▶ 오늘 결과 (${todayCount}명)`;
+        viewerPatients.filter((p) => p.isNewToday).forEach((patient, i) => {
+          const option = document.createElement("option");
+          option.value = String(i);
+          option.textContent = `${patient.name}${patient.chartNo ? ` (${patient.chartNo})` : ""}`;
+          todayGroup.append(option);
+        });
+        select.append(todayGroup);
+      }
+
+      const prevPatients = viewerPatients.filter((p) => !p.isNewToday);
+      if (prevPatients.length > 0) {
+        const prevGroup = document.createElement("optgroup");
+        prevGroup.label = `이전 결과 (${prevPatients.length}명)`;
+        prevPatients.forEach((patient, i) => {
+          const option = document.createElement("option");
+          option.value = String(todayCount + i);
+          option.textContent = `${patient.name}${patient.chartNo ? ` (${patient.chartNo})` : ""}`;
+          prevGroup.append(option);
+        });
+        select.append(prevGroup);
+      }
+
       select.hidden = viewerPatients.length < 2;
-      $("viewerStatus").textContent = `${viewerPatients.length}명 불러옴`;
+      $("viewerStatus").textContent = `오늘 결과 ${todayCount}명 / 전체 ${viewerPatients.length}명`;
       renderPatient(0);
     }
 

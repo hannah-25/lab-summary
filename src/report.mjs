@@ -43,6 +43,12 @@ export function buildPatientReport(rows) {
   return sections.filter(Boolean).join("\n\n");
 }
 
+function yesterday() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function buildPatientView(rows) {
   const groups = classifyRows(rows);
   const blood = splitRecentAndPrevious(groups.blood);
@@ -54,6 +60,7 @@ export function buildPatientView(rows) {
     chartNo: identity.chartNo || "",
     recentDate: blood.recentDate,
     previousDate: blood.previousDate,
+    isNewToday: blood.recentDate === yesterday(),
     lab: groups.blood.length ? buildBloodSummary(blood.previousRows, blood.recentRows) : "",
     ua: groups.urine.length ? buildUaSummary(urine.previousRows, urine.recentRows) : "",
     sputum: microItems(groups.sputum),
