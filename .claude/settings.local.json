@@ -16,7 +16,10 @@
       "PowerShell(Expand-Archive *)",
       "PowerShell(Get-ChildItem \"D:\\\\hannah-dev\\\\deploy-test\" -Force | ForEach-Object { $_.Name })",
       "Bash(git remote *)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(git push *)",
+      "Bash(dir D:\\\\hannah-dev\\\\새 폴더\\\\lab_summary\\\\node *)",
+      "PowerShell(git add *)"
     ]
   }
 }
