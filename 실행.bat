@@ -2,13 +2,13 @@
 chcp 949 > nul
 cd /d "%~dp0"
 if exist "%~dp0node\node.exe" (
-    set PATH=%~dp0node;%PATH%
+    set "PATH=%~dp0node;%PATH%"
 ) else (
     node --version >nul 2>&1
     if errorlevel 1 (
         echo.
         echo [오류] Node.js를 찾을 수 없습니다.
-        echo        배포 패키지에 node\ 폴더가 포함되어 있어야 합니다.
+        echo        배포 패키지의 node\ 폴더가 포함되어 있어야 합니다.
         echo.
         pause
         exit /b 1
@@ -35,7 +35,7 @@ goto main
 :personal
 echo.
 echo   [1]  일반검사 / UA   -- 혈액, 뇨 검사 결과 (최근 2회)
-echo   [2]  미생물 검사     -- 균, VRE/CRE 등 (최근 30일)
+echo   [2]  미생물 검사     -- 객담, VRE/CRE 등 (최근 30일)
 echo.
 set /p subChoice=검사 종류 선택 (1 또는 2): 
 echo.
@@ -53,7 +53,7 @@ goto personal
 :ward
 echo.
 echo   [1]  일반검사 / UA   -- 혈액, 뇨 검사 결과 (최근 2회)
-echo   [2]  미생물 검사     -- 균, VRE/CRE 등 (최근 30일)
+echo   [2]  미생물 검사     -- 객담, VRE/CRE 등 (최근 30일)
 echo.
 set /p subChoice=검사 종류 선택 (1 또는 2): 
 echo.
