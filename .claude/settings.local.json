@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(node --check src/batch.mjs)",
+      "Bash(node --check src/report.mjs)",
+      "Bash(node --check src/classify.mjs)",
+      "Bash(node --check src/capture.mjs)",
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"D:\\\\hannah-dev\\\\새 폴더\\\\lab_summary\\\\실행.bat\"\\); Write-Host \"BOM bytes: $\\($bytes[0]\\) $\\($bytes[1]\\) $\\($bytes[2]\\)\"; Get-Content \"D:\\\\hannah-dev\\\\새 폴더\\\\lab_summary\\\\실행.bat\" -Encoding UTF8 | Select-Object -First 10)",
+      "PowerShell(cmd /c \"chcp 65001 > nul && echo test 한글 출력\")",
+      "PowerShell(cmd /c \"D:\\\\hannah-dev\\\\새 폴더\\\\lab_summary\\\\실행.bat\" 2>&1 | Select-Object -First 20)",
+      "PowerShell(cd \"D:\\\\hannah-dev\\\\새 폴더\\\\lab_summary\"; $size = \\(Get-ChildItem -Recurse node_modules | Measure-Object -Property Length -Sum\\).Sum; [math]::Round\\($size/1MB, 1\\))",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(npm *)",
+      "PowerShell(Expand-Archive *)",
+      "PowerShell(Get-ChildItem \"D:\\\\hannah-dev\\\\deploy-test\" -Force | ForEach-Object { $_.Name })",
+      "Bash(git remote *)",
+      "Bash(echo \"exit: $?\")"
+    ]
+  }
+}

@@ -4,8 +4,11 @@ import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { extractLabRows } from "./extract.mjs";
+import { classifyRows } from "./classify.mjs";
 import { buildPatientReport, buildPatientView, groupByPatient } from "./report.mjs";
 import { openViewer } from "./html.mjs";
+
+const isMicro = process.argv.includes("--micro");
 
 const SRMS_URL = "https://srms.seegenemedical.com/main.do";
 const LIST_URL = "https://srms.seegenemedical.com/rstUserList.do";
@@ -56,6 +59,7 @@ function uniqueRows(rows) {
   ])).values()];
 }
 
+
 function searchVariants(name) {
   const withoutSuffix = name.replace(/\d+$/, "");
   return withoutSuffix && withoutSuffix !== name ? [name, withoutSuffix] : [name];
@@ -90,13 +94,13 @@ async function fetchDetail(request, detailTemplate, resultRow) {
   return postJson(request, DETAIL_URL, form);
 }
 
-async function saveOutputs(rows, failures, runId) {
+async function saveOutputs(rows, failures, runId, mode) {
   const reports = [];
   const views = [];
   for (const [key, patientRows] of groupByPatient(rows)) {
-    const report = buildPatientReport(patientRows);
+    const report = buildPatientReport(patientRows, { mode });
     reports.push(report);
-    views.push(buildPatientView(patientRows));
+    views.push(buildPatientView(patientRows, { mode }));
     await writeFile(join(OUTPUT_DIR, `${safeName(key)}-${runId}.txt`), report, "utf8");
   }
   const combinedPath = join(OUTPUT_DIR, `all-${runId}.txt`);
@@ -128,15 +132,10 @@ if (!patientNames.length) {
 // 날짜 입력
 const defaultTo = new Date();
 const defaultFrom = new Date(defaultTo);
-defaultFrom.setDate(defaultFrom.getDate() - 60);
+defaultFrom.setDate(defaultFrom.getDate() - (isMicro ? 30 : 60));
 const fromAnswer = await rl.question(`조회 시작일 [${ymd(defaultFrom)}]: `);
-const toAnswer = await rl.question(`조회 종료일 [${ymd(defaultTo)}]: `);
 const fromDate = parseYmd(fromAnswer) || ymd(defaultFrom);
-const toDate = parseYmd(toAnswer) || ymd(defaultTo);
-if (fromDate > toDate) {
-  rl.close();
-  throw new Error("조회 시작일은 종료일보다 늦을 수 없습니다.");
-}
+const toDate = ymd(defaultTo);
 
 // 브라우저 실행
 const context = await chromium.launchPersistentContext(PROFILE_DIR, {
@@ -173,7 +172,7 @@ context.on("response", async (response) => {
 
 await page.goto(SRMS_URL);
 console.log("");
-console.log("SRMS 로그인 후 → 검사결과 목록 화면으로 이동하세요.");
+console.log("검사결과 목록 화면으로 이동하세요.");
 console.log("(목록이 뜨면 양식이 자동 수집됩니다)");
 console.log("");
 
@@ -211,21 +210,71 @@ try {
         console.log("  검색 결과 없음");
         continue;
       }
-      console.log(`  상세 결과 ${search.rows.length}건`);
-      for (const [detailIndex, resultRow] of search.rows.entries()) {
+      const sortedRows = [...search.rows].sort((a, b) =>
+        String(b.DAT || "").localeCompare(String(a.DAT || ""))
+      );
+      const foundBloodUa = new Set();
+      const foundVre = new Set();
+      const foundSputum = new Set();
+      const foundStool = new Set();
+      const foundBloodCulture = new Set();
+      console.log(`  상세 결과 ${sortedRows.length}건`);
+      for (const [detailIndex, resultRow] of sortedRows.entries()) {
+        const satisfied = isMicro
+          ? foundVre.size >= 3 && foundSputum.size >= 1 && foundStool.size >= 1 && foundBloodCulture.size >= 1
+          : foundBloodUa.size >= 2;
+        if (satisfied) {
+          console.log(`  → 나머지 ${sortedRows.length - detailIndex}건 건너뜀`);
+          break;
+        }
+        const etcinf = String(resultRow.ETCINF || "");
+        if (etcinf) {
+          const relevant = isMicro
+            ? /sputum|stool|blood culture|rectal swab/i.test(etcinf)
+            : /serum|edta|urine/i.test(etcinf);
+          if (!relevant) {
+            console.log(`  ${detailIndex + 1}/${sortedRows.length} 건너뜀 (${etcinf})`);
+            continue;
+          }
+        }
         try {
           const payload = await fetchDetail(context.request, detailTemplate, resultRow);
-          // 첫 상세 응답에서 양식 보완
           if (!detailTemplate && payload?.param_rstUserDtl) {
             detailTemplate = scalarForm(payload.param_rstUserDtl);
           }
           captured.push({ url: DETAIL_URL, patientName, resultRow, payload });
-          collectedRows.push(...extractLabRows(payload, DETAIL_URL));
-          console.log(`  ${detailIndex + 1}/${search.rows.length} 완료`);
+          const extracted = extractLabRows(payload, DETAIL_URL);
+          const groups = classifyRows(extracted);
+          const jno = String(resultRow.JNO);
+          if (isMicro) {
+            if (groups.vre.length > 0 && foundVre.size < 3) {
+              foundVre.add(jno);
+              collectedRows.push(...groups.vre);
+            }
+            if (groups.sputum.length > 0 && foundSputum.size < 1) {
+              foundSputum.add(jno);
+              collectedRows.push(...groups.sputum);
+            }
+            if (groups.stool.length > 0 && foundStool.size < 1) {
+              foundStool.add(jno);
+              collectedRows.push(...groups.stool);
+            }
+            if (groups.bloodCulture.length > 0 && foundBloodCulture.size < 1) {
+              foundBloodCulture.add(jno);
+              collectedRows.push(...groups.bloodCulture);
+            }
+            collectedRows.push(...groups.unclassified);
+          } else {
+            if (groups.blood.length > 0 || groups.urine.length > 0) {
+              foundBloodUa.add(jno);
+            }
+            collectedRows.push(...groups.blood, ...groups.urine, ...groups.unclassified);
+          }
+          console.log(`  ${detailIndex + 1}/${sortedRows.length} 완료`);
           await new Promise((resolve) => setTimeout(resolve, 500));
         } catch (error) {
           failures.push({ patientName, stage: "detail", jno: resultRow.JNO, message: error.message });
-          console.log(`  ${detailIndex + 1}/${search.rows.length} 실패: ${error.message}`);
+          console.log(`  ${detailIndex + 1}/${sortedRows.length} 실패: ${error.message}`);
         }
       }
     } catch (error) {
@@ -241,7 +290,8 @@ const runId = timestamp();
 await writeFile(join(RAW_DIR, `capture-${runId}.json`), JSON.stringify(captured, null, 2), "utf8");
 
 const rows = uniqueRows(collectedRows);
-const paths = await saveOutputs(rows, failures, runId);
+const mode = isMicro ? "micro" : "blood";
+const paths = await saveOutputs(rows, failures, runId, mode);
 
 console.log("");
 console.log(`${groupByPatient(rows).size}명, ${rows.length}개 검사 결과 저장 완료`);

@@ -57,18 +57,22 @@ function verdict(result) {
   return cleaned || "결과 대기";
 }
 
-function latestRows(rows) {
-  const latestDate = rows.map((row) => clean(row.date || row.accessionDate).replaceAll("-", ""))
-    .filter((date) => /^\d{8}$/.test(date))
-    .sort()
-    .reverse()[0];
-  return latestDate
-    ? rows.filter((row) => clean(row.date || row.accessionDate).replaceAll("-", "") === latestDate)
-    : rows;
+function latestNDatesRows(rows, n) {
+  const dates = [...new Set(
+    rows.map((row) => clean(row.date || row.accessionDate).replaceAll("-", ""))
+      .filter((date) => /^\d{8}$/.test(date))
+  )].sort().reverse().slice(0, n);
+  if (!dates.length) return rows;
+  const dateSet = new Set(dates);
+  return rows.filter((row) => dateSet.has(clean(row.date || row.accessionDate).replaceAll("-", "")));
 }
 
-export function formatMicroSection(label, rows) {
-  const filtered = latestRows(rows).filter((row) => clean(row.result) !== "**");
+function latestRows(rows) {
+  return latestNDatesRows(rows, 1);
+}
+
+export function formatMicroSection(label, rows, { maxDates = 1 } = {}) {
+  const filtered = latestNDatesRows(rows, maxDates).filter((row) => clean(row.result) !== "**");
   if (!filtered.length) return `${label} :`;
   const items = filtered.map((row) =>
     `  [${displayDate(row)}] ${clean(row.name)}: ${clean(row.result) || "결과 대기"}`
@@ -76,8 +80,8 @@ export function formatMicroSection(label, rows) {
   return `${label} :\n${items.join("\n")}`;
 }
 
-export function microItems(rows) {
-  return latestRows(rows)
+export function microItems(rows, { maxDates = 1 } = {}) {
+  return latestNDatesRows(rows, maxDates)
     .filter((row) => clean(row.result) !== "**")
     .map((row) => ({
       date: pendingDate(row) || displayDate(row),

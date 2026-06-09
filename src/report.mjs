@@ -15,27 +15,31 @@ export function groupByPatient(rows) {
   return groups;
 }
 
-export function buildPatientReport(rows) {
+export function buildPatientReport(rows, { mode = "blood" } = {}) {
   const groups = classifyRows(rows);
-  const blood = splitRecentAndPrevious(groups.blood);
-  const urine = splitRecentAndPrevious(groups.urine);
   const identity = rows.find((row) => row.patientName || row.patientJno) ?? {};
   const title = [identity.patientName, identity.chartNo && `(${identity.chartNo})`]
     .filter(Boolean)
     .join(" ");
 
-  const sections = [
-    title || "환자 미확인",
-    blood.recentDate || blood.previousDate
-      ? `검사일 : ${blood.recentDate || "-"} <- ${blood.previousDate || "-"}`
-      : "",
-    buildBloodSummary(blood.previousRows, blood.recentRows),
-    buildUaSummary(urine.previousRows, urine.recentRows),
-    formatMicroSection("Sputum", groups.sputum),
-    formatMicroSection("Stool", groups.stool),
-    formatMicroSection("VRE/CRE", groups.vre),
-    formatMicroSection("Blood culture", groups.bloodCulture)
-  ];
+  const sections = [title || "환자 미확인"];
+
+  if (mode !== "micro") {
+    const blood = splitRecentAndPrevious(groups.blood);
+    const urine = splitRecentAndPrevious(groups.urine);
+    if (blood.recentDate || blood.previousDate) {
+      sections.push(`검사일 : ${blood.recentDate || "-"} <- ${blood.previousDate || "-"}`);
+    }
+    sections.push(buildBloodSummary(blood.previousRows, blood.recentRows));
+    sections.push(buildUaSummary(urine.previousRows, urine.recentRows));
+  }
+
+  if (mode !== "blood") {
+    sections.push(formatMicroSection("Sputum", groups.sputum));
+    sections.push(formatMicroSection("Stool", groups.stool));
+    sections.push(formatMicroSection("VRE/CRE", groups.vre, { maxDates: 3 }));
+    sections.push(formatMicroSection("Blood culture", groups.bloodCulture));
+  }
 
   if (groups.unclassified.length) {
     sections.push(`미분류 : ${groups.unclassified.map((row) => `${row.name}: ${row.result}`).join("    ")}`);
@@ -49,28 +53,45 @@ function yesterday() {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function buildPatientView(rows) {
+export function buildPatientView(rows, { mode = "blood" } = {}) {
   const groups = classifyRows(rows);
-  const blood = splitRecentAndPrevious(groups.blood);
-  const urine = splitRecentAndPrevious(groups.urine);
   const identity = rows.find((row) => row.patientName || row.chartNo) ?? {};
-  return {
+  const view = {
     id: identity.chartNo || identity.patientJno || identity.patientName || "unknown",
     name: identity.patientName || "환자 미확인",
     chartNo: identity.chartNo || "",
-    recentDate: blood.recentDate,
-    previousDate: blood.previousDate,
-    isNewToday: blood.recentDate === yesterday(),
-    lab: groups.blood.length ? buildBloodSummary(blood.previousRows, blood.recentRows) : "",
-    ua: groups.urine.length ? buildUaSummary(urine.previousRows, urine.recentRows) : "",
-    sputum: microItems(groups.sputum),
-    stool: microItems(groups.stool),
-    vreCre: microItems(groups.vre),
-    bloodCulture: microItems(groups.bloodCulture),
+    recentDate: "",
+    previousDate: "",
+    isNewToday: false,
+    lab: "",
+    ua: "",
+    sputum: [],
+    stool: [],
+    vreCre: [],
+    bloodCulture: [],
     unclassified: groups.unclassified.map((row) => ({
       date: row.date || row.accessionDate || "",
       name: row.name,
       result: row.result
     }))
   };
+
+  if (mode !== "micro") {
+    const blood = splitRecentAndPrevious(groups.blood);
+    const urine = splitRecentAndPrevious(groups.urine);
+    view.recentDate = blood.recentDate;
+    view.previousDate = blood.previousDate;
+    view.isNewToday = blood.recentDate === yesterday();
+    view.lab = groups.blood.length ? buildBloodSummary(blood.previousRows, blood.recentRows) : "";
+    view.ua = groups.urine.length ? buildUaSummary(urine.previousRows, urine.recentRows) : "";
+  }
+
+  if (mode !== "blood") {
+    view.sputum = microItems(groups.sputum);
+    view.stool = microItems(groups.stool);
+    view.vreCre = microItems(groups.vre, { maxDates: 3 });
+    view.bloodCulture = microItems(groups.bloodCulture);
+  }
+
+  return view;
 }
