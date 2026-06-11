@@ -2,14 +2,10 @@
 
 ## 새 컴퓨터 셋업
 
-1. **Node.js 설치** — https://nodejs.org (LTS 버전)
-2. **Chrome 설치** — 이미 설치돼 있으면 생략
-3. 프로젝트 폴더를 복사하거나 git clone
-4. 프로젝트 폴더에서 PowerShell 열고 실행:
-   ```powershell
-   npm.cmd install
-   ```
-5. `실행.bat` 더블클릭해서 시작
+1. 프로젝트 폴더를 압축 해제하거나 복사
+2. `실행.bat` 더블클릭
+
+Chrome이 이미 설치돼 있어야 합니다. Node.js는 별도 설치 불필요.
 
 로그인 세션은 컴퓨터마다 새로 만들어집니다. 첫 실행 시 SRMS에 직접 로그인하면 이후에는 자동으로 유지됩니다.
 
@@ -50,8 +46,8 @@ Chrome이 열리면 SRMS 로그인 후 검사결과 목록 화면으로 이동�
 
 분류 규칙을 수정한 뒤 다시 SRMS에 접속하지 않고 마지막 수집 결과를 재처리합니다.
 
-```powershell
-npm.cmd run reprocess
+```
+node src\reprocess.mjs
 ```
 
 ---
