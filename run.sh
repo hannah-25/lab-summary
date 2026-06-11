@@ -3,15 +3,18 @@
 cd "$(dirname "$0")"
 
 # --- node 확인 ---
-if [ ! -f "./node" ]; then
+if [ -f "./node" ]; then
+    NODE="./node"
+elif command -v node >/dev/null 2>&1; then
+    NODE="node"
+else
     echo ""
-    echo "[오류] node 파일이 없습니다."
-    echo "       폴더가 완전히 복사되었는지 확인하세요."
+    echo "[오류] Node.js가 설치되어 있지 않습니다."
+    echo "       https://nodejs.org 에서 설치 후 다시 실행하세요."
     echo ""
     read -rp "종료하려면 Enter를 누르세요..."
     exit 1
 fi
-NODE="./node"
 
 # --- playwright-core 확인 ---
 if [ ! -d "./node_modules/playwright-core" ]; then
