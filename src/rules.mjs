@@ -165,7 +165,8 @@ function indexRows(rows) {
   for (const original of rows) {
     const row = { ...original, name: canonicalName(original.name) };
     if (row.result === "**" || IGNORE.has(row.name)) continue;
-    if (isUaParent(row.parent) || /urine|뇨|소변/i.test(row.sample || "")) {
+    const isBloodSample = /serum|plasma|edta/i.test(row.sample || "");
+    if (!isBloodSample && (isUaParent(row.parent) || /urine|뇨|소변/i.test(row.sample || ""))) {
       if (UA_ABBR.has(row.name)) ua.set(row.name, row);
       continue;
     }
@@ -314,13 +315,14 @@ export function buildUaSummary(previousRows, recentRows) {
     uaItems.push(formatPair(UA_ABBR.get(name) || name, recentRow, previousRow));
   }
 
+  if (!uaItems.length && uaNames.length > 0) return "UA 결과 : Normal";
   return wrapItems("UA 결과", uaItems);
 }
 
 export function splitRecentAndPrevious(rows) {
   const accessions = new Map();
   for (const row of rows) {
-    const key = row.patientJno || normalizeDate(row.accessionDate) || normalizeDate(row.date);
+    const key = normalizeDate(row.accessionDate) || normalizeDate(row.date) || row.patientJno;
     if (!key) continue;
     if (!accessions.has(key)) accessions.set(key, []);
     accessions.get(key).push(row);
