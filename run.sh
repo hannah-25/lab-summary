@@ -19,11 +19,17 @@ fi
 # --- playwright-core 확인 ---
 if [ ! -d "./node_modules/playwright-core" ]; then
     echo ""
-    echo "[오류] node_modules/playwright-core 폴더가 없습니다."
-    echo "       폴더가 완전히 복사되었는지 확인하세요."
+    echo "패키지를 설치합니다 (최초 1회)..."
     echo ""
-    read -rp "종료하려면 Enter를 누르세요..."
-    exit 1
+    npm install --prefix . playwright-core@1.60.0
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "[오류] 패키지 설치에 실패했습니다."
+        echo "       인터넷 연결을 확인하고 다시 시도하세요."
+        echo ""
+        read -rp "종료하려면 Enter를 누르세요..."
+        exit 1
+    fi
 fi
 
 # --- Chrome 확인 (macOS) ---

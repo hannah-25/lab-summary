@@ -1,0 +1,8 @@
+{
+  "name": "lab-summary",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "1.60.0"
+  }
+}
