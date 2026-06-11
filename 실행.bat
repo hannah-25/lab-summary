@@ -5,11 +5,11 @@ setlocal
 cd /d "%~dp0"
 
 rem --- node.exe 확인 ---
-if exist "%~dp0node\node.exe" (
-    set "NODE=%~dp0node\node.exe"
+if exist "%~dp0node.exe" (
+    set "NODE=%~dp0node.exe"
 ) else (
     echo.
-    echo [오류] node\node.exe 파일이 없습니다.
+    echo [오류] node.exe 파일이 없습니다.
     echo        폴더가 완전히 복사되었는지 확인하세요.
     echo.
     pause
