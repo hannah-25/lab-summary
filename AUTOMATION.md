@@ -47,7 +47,7 @@ Chrome이 열리면 SRMS 로그인 후 검사결과 목록 화면으로 이동�
 분류 규칙을 수정한 뒤 다시 SRMS에 접속하지 않고 마지막 수집 결과를 재처리합니다.
 
 ```
-node src\reprocess.mjs
+node\node.exe src\reprocess.mjs
 ```
 
 ---
