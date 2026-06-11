@@ -213,7 +213,8 @@ try {
       const sortedRows = [...search.rows].sort((a, b) =>
         String(b.DAT || "").localeCompare(String(a.DAT || ""))
       );
-      const foundBloodUa = new Set();
+      const foundBlood = new Set();
+      const foundUrine = new Set();
       const foundVre = new Set();
       const foundSputum = new Set();
       const foundStool = new Set();
@@ -223,7 +224,7 @@ try {
       for (const [detailIndex, resultRow] of sortedRows.entries()) {
         const satisfied = isMicro
           ? foundVre.size >= 3 && foundSputum.size >= 1 && foundStool.size >= 1 && foundBloodCulture.size >= 1
-          : foundBloodUa.size >= 2;
+          : foundBlood.size >= 2;
         if (satisfied) {
           if (isMicro || resultRow.DAT !== lastCollectedDate) {
             console.log(`  → 나머지 ${sortedRows.length - detailIndex}건 건너뜀`);
@@ -272,9 +273,8 @@ try {
               console.log(`  ${detailIndex + 1}/${sortedRows.length} 건너뜀 (혈액배양 포함)`);
               continue;
             }
-            if (groups.blood.length > 0 || groups.urine.length > 0) {
-              foundBloodUa.add(jno);
-            }
+            if (groups.blood.length > 0) foundBlood.add(jno);
+            if (groups.urine.length > 0) foundUrine.add(jno);
             collectedRows.push(...groups.blood, ...groups.urine, ...groups.unclassified);
             lastCollectedDate = resultRow.DAT;
           }
