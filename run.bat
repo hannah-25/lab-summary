@@ -1,40 +1,40 @@
 @echo off
-chcp 949 > nul
+chcp 65001 > nul
 setlocal
 
 cd /d "%~dp0"
 
-rem --- node.exe È®ÀÎ ---
+rem --- node.exe í™•ì¸ ---
 if exist "%~dp0node.exe" (
     set "NODE=%~dp0node.exe"
 ) else (
     echo.
-    echo [¿À·ù] node.exe ÆÄÀÏÀÌ ¾ø½À´Ï´Ù.
-    echo        Æú´õ°¡ ¿ÏÀüÈ÷ º¹»çµÇ¾ú´ÂÁö È®ÀÎÇÏ¼¼¿ä.
+    echo [ì˜¤ë¥˜] node.exe íŒŒì¼ì´ ì—†ìŠµë‹ˆë‹¤.
+    echo        í´ë”ê°€ ì™„ì „ížˆ ë³µì‚¬ë˜ì—ˆëŠ”ì§€ í™•ì¸í•˜ì„¸ìš”.
     echo.
     pause
     exit /b 1
 )
 
-rem --- playwright-core È®ÀÎ ---
+rem --- playwright-core í™•ì¸ ---
 if not exist "%~dp0node_modules\playwright-core" (
     echo.
-    echo [¿À·ù] node_modules\playwright-core Æú´õ°¡ ¾ø½À´Ï´Ù.
-    echo        Æú´õ°¡ ¿ÏÀüÈ÷ º¹»çµÇ¾ú´ÂÁö È®ÀÎÇÏ¼¼¿ä.
+    echo [ì˜¤ë¥˜] node_modules\playwright-core í´ë”ê°€ ì—†ìŠµë‹ˆë‹¤.
+    echo        í´ë”ê°€ ì™„ì „ížˆ ë³µì‚¬ë˜ì—ˆëŠ”ì§€ í™•ì¸í•˜ì„¸ìš”.
     echo.
     pause
     exit /b 1
 )
 
-rem --- Chrome È®ÀÎ ---
+rem --- Chrome í™•ì¸ ---
 set "CHROME_FOUND="
 if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "CHROME_FOUND=1"
 if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" set "CHROME_FOUND=1"
 if exist "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" set "CHROME_FOUND=1"
 if not defined CHROME_FOUND (
     echo.
-    echo [¿À·ù] ChromeÀÌ ¼³Ä¡µÇ¾î ÀÖÁö ¾Ê½À´Ï´Ù.
-    echo        https://www.google.com/chrome ¿¡¼­ ¼³Ä¡ ÈÄ ´Ù½Ã ½ÇÇàÇÏ¼¼¿ä.
+    echo [ì˜¤ë¥˜] Chromeì´ ì„¤ì¹˜ë˜ì–´ ìžˆì§€ ì•ŠìŠµë‹ˆë‹¤.
+    echo        https://www.google.com/chrome ì—ì„œ ì„¤ì¹˜ í›„ ë‹¤ì‹œ ì‹¤í–‰í•˜ì„¸ìš”.
     echo.
     pause
     exit /b 1
@@ -46,55 +46,55 @@ echo ==============================
 echo       Lab Summary
 echo ==============================
 echo.
-echo   [1]  °³ÀÎ Á¶È¸   -- È¯ÀÚ ÀÌ¸§ Á÷Á¢ ÀÔ·Â
-echo   [2]  º´µ¿ Á¶È¸   -- ward-patients.txt »ç¿ë
+echo   [1]  ê°œì¸ ì¡°íšŒ   -- í™˜ìž ì´ë¦„ ì§ì ‘ ìž…ë ¥
+echo   [2]  ë³‘ë™ ì¡°íšŒ   -- ward-patients.txt ì‚¬ìš©
 echo.
-set /p choice=Á¶È¸ ¹æ¹ý ¼±ÅÃ (1 ¶Ç´Â 2):
+set /p choice=ì¡°íšŒ ë°©ë²• ì„ íƒ (1 ë˜ëŠ” 2):
 echo.
 
 if "%choice%"=="1" goto personal
 if "%choice%"=="2" goto ward
-echo Àß¸øµÈ ÀÔ·ÂÀÔ´Ï´Ù. 1 ¶Ç´Â 2¸¦ ÀÔ·ÂÇÏ¼¼¿ä.
+echo ìž˜ëª»ëœ ìž…ë ¥ìž…ë‹ˆë‹¤. 1 ë˜ëŠ” 2ë¥¼ ìž…ë ¥í•˜ì„¸ìš”.
 goto main
 
 :personal
 echo.
-echo   [1]  ÀÏ¹Ý°Ë»ç / UA   -- Ç÷¾×, ´¢ °Ë»ç °á°ú (ÃÖ±Ù 2È¸)
-echo   [2]  ¹Ì»ý¹° °Ë»ç     -- °´´ã, VRE/CRE µî (ÃÖ±Ù 30ÀÏ)
+echo   [1]  ì¼ë°˜ê²€ì‚¬ / UA   -- í˜ˆì•¡, ë‡¨ ê²€ì‚¬ ê²°ê³¼ (ìµœê·¼ 2íšŒ)
+echo   [2]  ë¯¸ìƒë¬¼ ê²€ì‚¬     -- ê°ë‹´, VRE/CRE ë“± (ìµœê·¼ 30ì¼)
 echo.
-set /p subChoice=°Ë»ç Á¾·ù ¼±ÅÃ (1 ¶Ç´Â 2):
+set /p subChoice=ê²€ì‚¬ ì¢…ë¥˜ ì„ íƒ (1 ë˜ëŠ” 2):
 echo.
 if "%subChoice%"=="1" (
     "%NODE%" src\capture.mjs
-    if errorlevel 1 echo [¿À·ù] ÇÁ·Î±×·¥ÀÌ ºñÁ¤»ó Á¾·áµÇ¾ú½À´Ï´Ù. À§ ¿À·ù ¸Þ½ÃÁö¸¦ È®ÀÎÇÏ¼¼¿ä.
+    if errorlevel 1 echo [ì˜¤ë¥˜] í”„ë¡œê·¸ëž¨ì´ ë¹„ì •ìƒ ì¢…ë£Œë˜ì—ˆìŠµë‹ˆë‹¤. ìœ„ ì˜¤ë¥˜ ë©”ì‹œì§€ë¥¼ í™•ì¸í•˜ì„¸ìš”.
     goto end
 )
 if "%subChoice%"=="2" (
     "%NODE%" src\capture.mjs --micro
-    if errorlevel 1 echo [¿À·ù] ÇÁ·Î±×·¥ÀÌ ºñÁ¤»ó Á¾·áµÇ¾ú½À´Ï´Ù. À§ ¿À·ù ¸Þ½ÃÁö¸¦ È®ÀÎÇÏ¼¼¿ä.
+    if errorlevel 1 echo [ì˜¤ë¥˜] í”„ë¡œê·¸ëž¨ì´ ë¹„ì •ìƒ ì¢…ë£Œë˜ì—ˆìŠµë‹ˆë‹¤. ìœ„ ì˜¤ë¥˜ ë©”ì‹œì§€ë¥¼ í™•ì¸í•˜ì„¸ìš”.
     goto end
 )
-echo Àß¸øµÈ ÀÔ·ÂÀÔ´Ï´Ù. 1 ¶Ç´Â 2¸¦ ÀÔ·ÂÇÏ¼¼¿ä.
+echo ìž˜ëª»ëœ ìž…ë ¥ìž…ë‹ˆë‹¤. 1 ë˜ëŠ” 2ë¥¼ ìž…ë ¥í•˜ì„¸ìš”.
 goto personal
 
 :ward
 echo.
-echo   [1]  ÀÏ¹Ý°Ë»ç / UA   -- Ç÷¾×, ´¢ °Ë»ç °á°ú (ÃÖ±Ù 2È¸)
-echo   [2]  ¹Ì»ý¹° °Ë»ç     -- °´´ã, VRE/CRE µî (ÃÖ±Ù 30ÀÏ)
+echo   [1]  ì¼ë°˜ê²€ì‚¬ / UA   -- í˜ˆì•¡, ë‡¨ ê²€ì‚¬ ê²°ê³¼ (ìµœê·¼ 2íšŒ)
+echo   [2]  ë¯¸ìƒë¬¼ ê²€ì‚¬     -- ê°ë‹´, VRE/CRE ë“± (ìµœê·¼ 30ì¼)
 echo.
-set /p subChoice=°Ë»ç Á¾·ù ¼±ÅÃ (1 ¶Ç´Â 2):
+set /p subChoice=ê²€ì‚¬ ì¢…ë¥˜ ì„ íƒ (1 ë˜ëŠ” 2):
 echo.
 if "%subChoice%"=="1" (
     "%NODE%" src\batch.mjs
-    if errorlevel 1 echo [¿À·ù] ÇÁ·Î±×·¥ÀÌ ºñÁ¤»ó Á¾·áµÇ¾ú½À´Ï´Ù. À§ ¿À·ù ¸Þ½ÃÁö¸¦ È®ÀÎÇÏ¼¼¿ä.
+    if errorlevel 1 echo [ì˜¤ë¥˜] í”„ë¡œê·¸ëž¨ì´ ë¹„ì •ìƒ ì¢…ë£Œë˜ì—ˆìŠµë‹ˆë‹¤. ìœ„ ì˜¤ë¥˜ ë©”ì‹œì§€ë¥¼ í™•ì¸í•˜ì„¸ìš”.
     goto end
 )
 if "%subChoice%"=="2" (
     "%NODE%" src\batch.mjs --micro
-    if errorlevel 1 echo [¿À·ù] ÇÁ·Î±×·¥ÀÌ ºñÁ¤»ó Á¾·áµÇ¾ú½À´Ï´Ù. À§ ¿À·ù ¸Þ½ÃÁö¸¦ È®ÀÎÇÏ¼¼¿ä.
+    if errorlevel 1 echo [ì˜¤ë¥˜] í”„ë¡œê·¸ëž¨ì´ ë¹„ì •ìƒ ì¢…ë£Œë˜ì—ˆìŠµë‹ˆë‹¤. ìœ„ ì˜¤ë¥˜ ë©”ì‹œì§€ë¥¼ í™•ì¸í•˜ì„¸ìš”.
     goto end
 )
-echo Àß¸øµÈ ÀÔ·ÂÀÔ´Ï´Ù. 1 ¶Ç´Â 2¸¦ ÀÔ·ÂÇÏ¼¼¿ä.
+echo ìž˜ëª»ëœ ìž…ë ¥ìž…ë‹ˆë‹¤. 1 ë˜ëŠ” 2ë¥¼ ìž…ë ¥í•˜ì„¸ìš”.
 goto ward
 
 :end
