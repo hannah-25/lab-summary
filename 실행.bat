@@ -26,6 +26,20 @@ if not exist "%~dp0node_modules\playwright-core" (
     exit /b 1
 )
 
+rem --- Chrome 확인 ---
+set "CHROME_FOUND="
+if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "CHROME_FOUND=1"
+if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" set "CHROME_FOUND=1"
+if exist "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" set "CHROME_FOUND=1"
+if not defined CHROME_FOUND (
+    echo.
+    echo [오류] Chrome이 설치되어 있지 않습니다.
+    echo        https://www.google.com/chrome 에서 설치 후 다시 실행하세요.
+    echo.
+    pause
+    exit /b 1
+)
+
 :main
 echo.
 echo ==============================
