@@ -94,11 +94,18 @@ export function extractLabRows(payload, sourceUrl = "") {
   function extractNode(value) {
     if (Array.isArray(value)) {
       let activeParent = "";
+      let activeParentSample = "";
       for (const item of value) {
         if (item && typeof item === "object" && !Array.isArray(item)) {
+          const itemSample = asText(item.O_TNM).trim().toLowerCase();
+          if (activeParentSample && itemSample && itemSample !== activeParentSample) {
+            activeParent = "";
+            activeParentSample = "";
+          }
           const row = appendRow(item, activeParent);
           if (row?.result === "**") {
             activeParent = row.name;
+            activeParentSample = row.sample.trim().toLowerCase();
           }
           for (const child of Object.values(item)) extractNode(child);
         } else {

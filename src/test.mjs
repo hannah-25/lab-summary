@@ -33,13 +33,15 @@ assert.match(summary, /OT\/PT\(34\/20\)<-\(16\/55H\)/);
 const classified = classifyRows([
   { name: "WBC", sample: "EDTA W/B" },
   { name: "WBC", sample: "Random Urine" },
+  { name: "WBC", sample: "EDTA W/B", parent: "Urine(10)" },
+  { name: "CRP (정량)", sample: "Serum", parent: "Differential count" },
   { name: "C. difficile toxin A & B", sample: "Stool" },
   { name: "VRE culture", sample: "Rectal swab" },
   { name: "CRE culture", sample: "Rectal swab" },
   { name: "AFB stain", sample: "Sputum" },
   { name: "혈액배양", sample: "Blood Culture" }
 ]);
-assert.equal(classified.blood.length, 1);
+assert.equal(classified.blood.length, 3);
 assert.equal(classified.urine.length, 1);
 assert.equal(classified.stool.length, 1);
 assert.equal(classified.vre.length, 2);
@@ -69,5 +71,19 @@ const cultureRows = extractLabRows({
   }]
 });
 assert.equal(cultureRows[0].result, "No growth.");
+
+const mixedSampleRows = extractLabRows({
+  rstUserDtl: [{ JNO: "7204077", NAM: "박세근", DAT: "20260610" }],
+  results: [
+    { O_GCDN: "Urine(10)", O_CHR: "**", O_TNM: "Random Urine" },
+    { O_GCDN: "Glucose", O_CHR: "4 Positive", O_TNM: "Random Urine" },
+    { O_GCDN: "WBC", O_CHR: "5.38", O_TNM: "EDTA W/B" },
+    { O_GCDN: "CRP (정량)", O_CHR: "0.2", O_TNM: "Serum" }
+  ]
+});
+assert.equal(mixedSampleRows[1].parent, "Urine(10)");
+assert.equal(mixedSampleRows[2].parent, "");
+assert.equal(mixedSampleRows[3].parent, "");
+assert.equal(classifyRows(mixedSampleRows).blood.length, 2);
 
 console.log("All tests passed.");

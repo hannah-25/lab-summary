@@ -6,10 +6,13 @@ const BLOOD_CULTURE_WORDS = /blood\s*culture|혈액배양/i;
 
 export function classifyRow(row) {
   const text = [row.name, row.sample, row.parent, row.remark].filter(Boolean).join(" ");
+  const sample = String(row.sample || "");
   if (VRE_WORDS.test(text)) return "vre";
   if (SPUTUM_WORDS.test(text)) return "sputum";
   if (STOOL_WORDS.test(text)) return "stool";
   if (BLOOD_CULTURE_WORDS.test(text)) return "bloodCulture";
+  if (/urine|뇨|소변/i.test(sample)) return "urine";
+  if (BLOOD_SAMPLES.test(sample)) return "blood";
   if (/urine|뇨|소변/i.test(text)) return "urine";
   if (BLOOD_SAMPLES.test(text)) return "blood";
   return "unclassified";
