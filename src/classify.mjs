@@ -43,6 +43,23 @@ function displayDate(row) {
     : "-";
 }
 
+function accessionDisplayDate(row) {
+  const date = clean(row.accessionDate || row.date).replaceAll("-", "");
+  return /^\d{8}$/.test(date)
+    ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
+    : "-";
+}
+
+function reportDateLabel(row) {
+  const pendingMatch = clean(row.result).match(/(\d{2})\/(\d{2})\s*보고예정/);
+  if (pendingMatch) return `(${Number(pendingMatch[1])}/${Number(pendingMatch[2])} 보고예정)`;
+  const reportDate = clean(row.date).replaceAll("-", "");
+  if (/^\d{8}$/.test(reportDate)) {
+    return `(${Number(reportDate.slice(4, 6))}/${Number(reportDate.slice(6, 8))} 보고)`;
+  }
+  return "";
+}
+
 function pendingDate(row) {
   const match = clean(row.result).match(/(\d{2})\/(\d{2})\s*보고예정/);
   if (!match) return "";
@@ -77,18 +94,26 @@ function latestRows(rows) {
 export function formatMicroSection(label, rows, { maxDates = 1 } = {}) {
   const filtered = latestNDatesRows(rows, maxDates).filter((row) => clean(row.result) !== "**");
   if (!filtered.length) return `${label} :`;
-  const items = filtered.map((row) =>
-    `  [${displayDate(row)}] ${clean(row.name)}: ${clean(row.result) || "결과 대기"}`
-  );
+  const items = filtered.map((row) => {
+    const reportLabel = reportDateLabel(row);
+    const datePart = reportLabel
+      ? `${accessionDisplayDate(row)} ${reportLabel}`
+      : accessionDisplayDate(row);
+    return `  [${datePart}] ${clean(row.name)}: ${clean(row.result) || "결과 대기"}`;
+  });
   return `${label} :\n${items.join("\n")}`;
 }
 
 export function microItems(rows, { maxDates = 1 } = {}) {
   return latestNDatesRows(rows, maxDates)
     .filter((row) => clean(row.result) !== "**")
-    .map((row) => ({
-      date: pendingDate(row) || displayDate(row),
-      name: clean(row.name),
-      result: verdict(row.result)
-    }));
+    .map((row) => {
+      const reportLabel = reportDateLabel(row);
+      const accDate = accessionDisplayDate(row);
+      return {
+        date: reportLabel ? `${accDate} ${reportLabel}` : accDate,
+        name: clean(row.name),
+        result: verdict(row.result)
+      };
+    });
 }
