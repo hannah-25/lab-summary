@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lab Summary</title>
+  <link rel="stylesheet" href="viewer.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <div class="brand">
+        <img class="brand-logo" src="trinity-logo.svg" alt="트리니티병원" />
+        <h1>Lab Summary</h1>
+        <p class="tagline">오늘도 가볍게, 한눈에 정리</p>
+      </div>
+      <img class="mascot" src="lab-mascot.png" alt="" />
+      <div class="header-tools">
+        <div id="status" class="status" aria-live="polite"></div>
+      </div>
+    </header>
+
+    <section class="viewer" aria-label="조회 결과">
+      <div class="viewer-toolbar">
+        <select id="patientSelect" hidden aria-label="환자 선택"></select>
+        <button type="button" class="primary" id="printToday">오늘 결과 인쇄</button>
+        <span id="viewerStatus" class="status"></span>
+      </div>
+      <div id="viewerContent" class="viewer-content" hidden>
+        <div class="patient-banner">
+          <strong id="viewerPatient"></strong>
+          <span id="viewerDates"></span>
+        </div>
+        <section class="result-form">
+          <h2>피검사</h2>
+          <textarea id="viewerLab" class="editable-output" spellcheck="false"></textarea>
+        </section>
+        <section class="result-form">
+          <h2>UA 검사</h2>
+          <textarea id="viewerUa" class="editable-output" spellcheck="false"></textarea>
+        </section>
+        <section class="result-form">
+          <h2>Sputum</h2>
+          <textarea id="viewerSputum" class="editable-output" spellcheck="false"></textarea>
+        </section>
+        <section class="result-form">
+          <h2>Stool</h2>
+          <textarea id="viewerStool" class="editable-output" spellcheck="false"></textarea>
+        </section>
+        <section class="result-form">
+          <h2>VRE/CRE</h2>
+          <textarea id="viewerVreCre" class="editable-output" spellcheck="false"></textarea>
+        </section>
+        <section class="result-form">
+          <h2>Blood culture</h2>
+          <textarea id="viewerBloodCulture" class="editable-output" spellcheck="false"></textarea>
+        </section>
+        <section class="result-form">
+          <h2>최종 검사 결과</h2>
+          <div class="actions">
+            <button type="button" class="primary" id="generateFinal">전체 결과 생성</button>
+            <button type="button" id="copyFinal">전체 결과 복사</button>
+          </div>
+          <textarea id="viewerFinal" class="editable-output final" spellcheck="false"></textarea>
+        </section>
+      </div>
+    </section>
+    <footer>
+      © 2026 Hannah J ·
+      <a href="mailto:hannah.j.dev@gmail.com">hannah.j.dev@gmail.com</a>
+    </footer>
+  </main>
+
+  <!-- 인쇄 전용 영역 (화면에는 숨김, @media print 에서만 표시) -->
+  <div id="printArea" class="print-area"></div>
+
+  <script src="viewer.js"></script>
+</body>
+</html>

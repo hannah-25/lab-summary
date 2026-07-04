@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Lab Summary Monitor",
+  "version": "0.1.0",
+  "description": "SRMS 기타검사(혈액/UA 제외) 새 결과를 감시하고 알림으로 알려줍니다.",
+  "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": ["https://srms.seegenemedical.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Lab Summary Monitor"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://srms.seegenemedical.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://srms.seegenemedical.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "world": "ISOLATED",
+      "all_frames": true
+    }
+  ],
+  "icons": {
+    "128": "icon128.png"
+  }
+}
