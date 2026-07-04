@@ -23,7 +23,6 @@
     <section class="viewer" aria-label="조회 결과">
       <div class="viewer-toolbar">
         <select id="patientSelect" hidden aria-label="환자 선택"></select>
-        <button type="button" class="primary" id="printToday">오늘 결과 인쇄</button>
         <span id="viewerStatus" class="status"></span>
       </div>
       <div id="viewerContent" class="viewer-content" hidden>
@@ -70,9 +69,6 @@
       <a href="mailto:hannah.j.dev@gmail.com">hannah.j.dev@gmail.com</a>
     </footer>
   </main>
-
-  <!-- 인쇄 전용 영역 (화면에는 숨김, @media print 에서만 표시) -->
-  <div id="printArea" class="print-area"></div>
 
   <script src="viewer.js"></script>
 </body>

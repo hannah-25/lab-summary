@@ -106,39 +106,6 @@ async function loadFromStorage() {
   loadViewerData(lastLookupView);
 }
 
-// --- 오늘 새로 나온 환자 전체를 최근 결과만으로 인쇄 ---
-function printItemLines(items) {
-  return (items || [])
-    .map((i) => `  [${i.date || "-"}] ${i.name}: ${i.result || "결과 대기"}`)
-    .join("\n");
-}
-
-function printToday() {
-  const today = viewerPatients.filter((p) => p.isNewToday);
-  if (!today.length) {
-    $("viewerStatus").textContent = "오늘 새로 나온 결과가 없습니다.";
-    return;
-  }
-  const area = $("printArea");
-  area.replaceChildren();
-  for (const p of today) {
-    const parts = [`${p.name}${p.chartNo ? ` (${p.chartNo})` : ""}   [검사일 ${p.recentDate || "-"}]`];
-    if (p.labRecent) parts.push(p.labRecent);
-    if (p.uaRecent) parts.push(p.uaRecent);
-    if (p.sputum?.length) parts.push(`Sputum\n${printItemLines(p.sputum)}`);
-    if (p.stool?.length) parts.push(`Stool\n${printItemLines(p.stool)}`);
-    if (p.vreCre?.length) parts.push(`VRE/CRE\n${printItemLines(p.vreCre)}`);
-    if (p.bloodCulture?.length) parts.push(`Blood culture\n${printItemLines(p.bloodCulture)}`);
-    const block = document.createElement("pre");
-    block.className = "print-patient";
-    block.textContent = parts.join("\n\n");
-    area.append(block);
-  }
-  $("viewerStatus").textContent = `오늘 결과 ${today.length}명 인쇄`;
-  window.print();
-}
-
-$("printToday").addEventListener("click", printToday);
 $("patientSelect").addEventListener("change", (event) => {
   renderPatient(Number(event.target.value));
 });

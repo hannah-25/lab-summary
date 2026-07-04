@@ -320,7 +320,7 @@ export function buildUaSummary(previousRows, recentRows) {
   return wrapItems("UA 결과", uaItems);
 }
 
-// --- 최근 결과만 (이전 비교 없이) — 인쇄용 ---
+// --- 최근 결과만 (이전 비교 없이) ---
 function formatSingle(label, recentRow) {
   return `${label}${formattedResult(recentRow)}`;
 }
