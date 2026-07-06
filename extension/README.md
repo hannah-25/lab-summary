@@ -5,7 +5,7 @@
 - **기타검사 감시** — 지정 환자의 기타검사(혈액/UA 제외)에 새 결과가 나오면 **크롬 알림**으로 알려줌 (자동 폴링)
 - **혈액 / UA 조회** — 여러 환자의 혈액·UA 요약을 그 자리에서 조회 (개인 조회 `capture.mjs` 의 익스텐션 버전, 온디맨드)
 
-기존 CLI(`node src\capture.mjs` 등)와 **독립적으로 동작**하며, 로직(`extract`/`classify`/`rules`/`report`)은 CLI에서 그대로 이식했습니다.
+로직(`extract`/`classify`/`rules`/`report`)은 이전 Playwright CLI에서 그대로 이식했습니다. CLI 파이프라인(병동 일괄 조회 포함)은 `legacy-pipeline` 브랜치에 보관되어 있습니다.
 
 ## 설치 (개발자 모드)
 
@@ -93,6 +93,5 @@ lib/lookup.js     혈액/UA 온디맨드 수집 (capture.mjs blood 경로 이식
 lib/report.js 의 buildPatientView 가 뷰어용 구조체 생성
 lib/srms.js       fetch 기반 목록/상세 조회, STS 판정
 lib/monitor.js    STS diff 신규 판정, 상태 저장
-verify.mjs        감시 로직 검증 (node.exe extension/verify.mjs)
-verify-blood.mjs  혈액/UA 포맷 CLI 패리티 검증 (node.exe extension/verify-blood.mjs)
+verify.mjs        추출·필터·감시 로직 검증 (node extension/verify.mjs)
 ```

@@ -1,4 +1,4 @@
-node_modules/**/*.exe
+node_modules/
 credentials.txt
 .claude/
 extension/dev-local.js
