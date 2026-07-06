@@ -27,6 +27,44 @@
     try { return JSON.parse(text); } catch { return null; }
   }
 
+  function openSrmsDetailFromQuery() {
+    const params = new URLSearchParams(location.search);
+    if (params.get("labOpen") !== "1" || window.__labMonitorOpenDetailStarted) return;
+    const dat = params.get("labDat") || "";
+    const jno = params.get("labJno") || "";
+    const hos = params.get("labHos") || "";
+    if (!dat || !jno) return;
+    window.__labMonitorOpenDetailStarted = true;
+    const rawDat = dat.replace(/\D/g, "");
+
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      const jq = window.jQuery || window.$;
+      const datInput = document.getElementById("S_DAT");
+      const jnoInput = document.getElementById("S_JNO");
+      if (!jq || !datInput || !jnoInput || typeof window.dataResult2 !== "function") {
+        if (tries > 120) clearInterval(timer);
+        return;
+      }
+
+      jq(datInput).val(rawDat).trigger("change");
+      jq(jnoInput).val(jno).trigger("change");
+      window.dataResult2({
+        DAT: rawDat,
+        JNO: jno,
+        HOS: hos || document.getElementById("I_PHOS")?.value || ""
+      });
+      clearInterval(timer);
+    }, 250);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", openSrmsDetailFromQuery, { once: true });
+  } else {
+    openSrmsDetailFromQuery();
+  }
+
   // --- fetch 후킹 ---
   const origFetch = window.fetch;
   if (typeof origFetch === "function") {

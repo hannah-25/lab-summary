@@ -77,13 +77,25 @@ function renderResults(store) {
     box.appendChild(p);
     return;
   }
-  for (const r of list.slice(0, 20)) {
+  for (const [index, r] of list.slice(0, 20).entries()) {
     const card = document.createElement("div");
     card.className = "card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.title = "상세 보기";
+    card.addEventListener("click", () => {
+      send({ type: "openNotificationDetail", index });
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      send({ type: "openNotificationDetail", index });
+    });
     const head = document.createElement("div");
     head.className = "head";
-    const nm = document.createElement("span");
-    nm.textContent = r.patientName + (r.chartNo ? ` (${r.chartNo})` : "");
+    const nm = document.createElement("div");
+    nm.className = "patient";
+    nm.textContent = `환자: ${r.patientName || "환자 미확인"}${r.chartNo ? ` · 차트번호: ${r.chartNo}` : ""}`;
     const when = document.createElement("span");
     when.className = "when";
     when.textContent = fmtTime(r.at);
@@ -92,13 +104,16 @@ function renderResults(store) {
     for (const item of r.items) {
       const row = document.createElement("div");
       row.className = "item";
-      const nmEl = document.createElement("span");
+      const nmEl = document.createElement("div");
       nmEl.className = "nm";
       nmEl.textContent = item.name + (item.sample ? ` · ${item.sample}` : "");
-      const rsEl = document.createElement("span");
+      const metaEl = document.createElement("div");
+      metaEl.className = "meta";
+      metaEl.textContent = `검사 시행일 ${item.performedDate || item.date || "-"} · 검사 확인일 ${item.checkedDate || "-"}`;
+      const rsEl = document.createElement("div");
       rsEl.className = "rs";
-      rsEl.textContent = item.result;
-      row.append(nmEl, rsEl);
+      rsEl.textContent = `결과 ${item.result}`;
+      row.append(nmEl, metaEl, rsEl);
       card.appendChild(row);
     }
     box.appendChild(card);
@@ -110,6 +125,20 @@ async function refresh() {
   renderStatus(store);
   renderWatchlist(store);
   renderResults(store);
+}
+
+async function loadLocalDevTools() {
+  try {
+    const url = chrome.runtime.getURL("dev-local.js");
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const script = document.createElement("script");
+    script.src = url;
+    script.defer = true;
+    document.documentElement.appendChild(script);
+  } catch {
+    // 로컬 전용 파일이 없으면 아무 것도 하지 않는다.
+  }
 }
 
 async function addPatient() {
@@ -136,6 +165,45 @@ $("checkNow").addEventListener("click", async () => {
     refresh();
   }
 });
+
+function setOtherLookupStatus(msg, kind) {
+  const el = $("otherLookupStatus");
+  if (!msg) { el.hidden = true; return; }
+  el.hidden = false;
+  el.className = "status" + (kind ? ` ${kind}` : "");
+  el.textContent = msg;
+}
+
+$("otherLookupBtn").addEventListener("click", async () => {
+  const days = Math.max(1, Math.min(365, Number($("otherLookupDays").value) || 30));
+  const btn = $("otherLookupBtn");
+  btn.disabled = true;
+  btn.textContent = "조회 중…";
+  setOtherLookupStatus(`감시 환자의 최근 ${days}일 기타검사 3개를 조회 중입니다.`, "");
+  try {
+    const res = await send({ type: "otherLookup", limit: 3, days });
+    if (res.status === "no-template") {
+      setOtherLookupStatus("조회 양식 미수집: SRMS 검사결과 목록을 한 번 조회한 뒤 다시 시도하세요.", "warn");
+    } else if (res.status === "empty") {
+      setOtherLookupStatus("감시 환자를 먼저 추가하세요.", "warn");
+    } else if (res.status === "login-required") {
+      setOtherLookupStatus("SRMS 로그인이 필요합니다. 로그인 후 다시 조회하세요.", "err");
+    } else if (res.status === "error") {
+      setOtherLookupStatus(`오류: ${res.error || "원인 없음"}`, "err");
+    } else {
+      const failures = res.failures || [];
+      const suffix = failures.length ? ` · 결과 없음 ${failures.length}명(${failures.join(", ")})` : "";
+      setOtherLookupStatus(`완료 · ${res.views?.length || 0}명 뷰어 열림${suffix}`, failures.length ? "warn" : "");
+    }
+  } catch (e) {
+    setOtherLookupStatus(`오류: ${e.message}`, "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "최근 3개 뷰어 열기";
+  }
+});
+
+loadLocalDevTools();
 
 // ---------- 혈액/UA 조회 탭 ----------
 function parseNames(text) {

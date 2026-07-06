@@ -255,9 +255,25 @@ function sortByOrder(names, order) {
 function wrapItems(prefix, items) {
   if (!items.length) return `${prefix} :`;
   const indent = " ".repeat(prefix.length + 3);
+  const columns = 3;
+  const gap = 4;
+  const widths = Array.from({ length: columns }, (_, column) => Math.max(
+    ...items
+      .filter((_, index) => index % columns === column)
+      .map((item) => item.length),
+    0
+  ));
   const lines = [];
-  for (let index = 0; index < items.length; index += 3) {
-    const line = items.slice(index, index + 3).join("            ");
+  for (let index = 0; index < items.length; index += columns) {
+    const line = items.slice(index, index + columns)
+      .map((item, offset) => {
+        const column = index + offset;
+        return offset < columns - 1
+          ? item.padEnd(widths[column % columns] + gap, " ")
+          : item;
+      })
+      .join("")
+      .trimEnd();
     lines.push(index === 0 ? `${prefix} : ${line}` : `${indent}${line}`);
   }
   return lines.join("\n");

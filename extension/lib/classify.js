@@ -54,6 +54,16 @@ function reportDateLabel(row) {
   return "";
 }
 
+function reportDisplayDate(row) {
+  const pendingMatch = clean(row.result).match(/(\d{2})\/(\d{2})\s*보고예정/);
+  if (pendingMatch) return `${Number(pendingMatch[1])}/${Number(pendingMatch[2])} 보고예정`;
+  const reportDate = clean(row.date).replaceAll("-", "");
+  if (/^\d{8}$/.test(reportDate)) {
+    return `${reportDate.slice(0, 4)}-${reportDate.slice(4, 6)}-${reportDate.slice(6, 8)}`;
+  }
+  return "-";
+}
+
 export function verdict(result) {
   const cleaned = clean(result);
   if (/보고예정/.test(cleaned)) return "보고예정";
@@ -82,6 +92,8 @@ export function summarizeRows(rows) {
     const accDate = accessionDisplayDate(row);
     return {
       date: reportLabel ? `${accDate} ${reportLabel}` : accDate,
+      performedDate: accDate,
+      checkedDate: reportDisplayDate(row),
       name: clean(row.name),
       sample: clean(row.sample),
       result: verdict(row.result)

@@ -88,12 +88,16 @@ textarea {
 
 .results { display: flex; flex-direction: column; gap: 8px; }
 .results .empty { color: #94a3b8; font-size: 12px; }
-.card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; }
-.card .head { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px; }
+.card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+.card:hover { background: #f8fafc; }
+.card:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.card .head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; margin-bottom: 4px; }
+.card .patient { min-width: 0; color: #1f2430; font-size: 14px; font-weight: 800; word-break: break-word; }
 .card .when { color: #94a3b8; font-weight: 400; font-size: 11px; }
-.card .item { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-top: 1px dashed #eef2f7; }
+.card .item { display: block; padding: 6px 0; border-top: 1px dashed #eef2f7; }
 .card .item .nm { color: #334155; }
-.card .item .rs { color: #0f766e; text-align: right; font-variant-numeric: tabular-nums; }
+.card .item .meta { margin-top: 2px; color: #64748b; font-size: 11px; }
+.card .item .rs { margin-top: 2px; color: #0f766e; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .report {
   margin: 10px 0 0;

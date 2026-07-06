@@ -1,30 +1,33 @@
 // 감시/알림 service worker.
-import { runCheck, loadStore, saveStore } from "./lib/monitor.js";
+import { collectRecentOtherViews, runCheck, loadStore, saveStore } from "./lib/monitor.js";
 import { collectBloodUa, ymd } from "./lib/lookup.js";
 import { groupByPatient, uniqueRows, buildBloodUaReport, buildPatientView } from "./lib/report.js";
 import { LoginRequiredError } from "./lib/srms.js";
 
 const ALARM = "lab-poll";
+const SRMS_RESULT_URL = "https://srms.seegenemedical.com/rstUser.do?menu_cd=RSTUSER&menu_nm=%EC%88%98%EC%A7%84%EC%9E%90%EB%B3%84%20%EA%B2%B0%EA%B3%BC%EC%A1%B0%ED%9A%8C(A)&QuickYN=Y";
 
-// 감시 시간대: 매일 06:00 ~ 06:30, 10분 간격 → 06:00 / 06:10 / 06:20 / 06:30
+// 감시 시간대: 매시 정각 + 매일 06:00 ~ 06:30은 10분 간격
 const WINDOW_START_MIN = 6 * 60;      // 06:00
 const WINDOW_END_MIN = 6 * 60 + 30;   // 06:30
 const STEP_MIN = 10;
 
-const SLOTS = [];
-for (let m = WINDOW_START_MIN; m <= WINDOW_END_MIN; m += STEP_MIN) SLOTS.push(m);
+const SLOTS = new Set();
+for (let hour = 0; hour < 24; hour += 1) SLOTS.add(hour * 60);
+for (let m = WINDOW_START_MIN; m <= WINDOW_END_MIN; m += STEP_MIN) SLOTS.add(m);
+const SORTED_SLOTS = [...SLOTS].sort((a, b) => a - b);
 
 // 현재 시각 이후의 다음 슬롯 시각(ms). 오늘 남은 슬롯이 없으면 내일 첫 슬롯.
 function nextFireTime(now = Date.now()) {
   const base = new Date(now);
-  for (const mins of SLOTS) {
+  for (const mins of SORTED_SLOTS) {
     const t = new Date(base);
     t.setHours(0, mins, 0, 0);
     if (t.getTime() > now) return t.getTime();
   }
   const t = new Date(base);
   t.setDate(t.getDate() + 1);
-  t.setHours(0, SLOTS[0], 0, 0);
+  t.setHours(0, SORTED_SLOTS[0], 0, 0);
   return t.getTime();
 }
 
@@ -45,6 +48,9 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 async function setBadge(count) {
   await chrome.action.setBadgeBackgroundColor({ color: "#d9534f" });
   await chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
+  await chrome.action.setTitle({
+    title: count > 0 ? `Lab Summary Monitor · 새 결과 ${count}건` : "Lab Summary Monitor"
+  });
 }
 
 // --- 알림 발행 ---
@@ -54,10 +60,86 @@ function notify(result) {
   chrome.notifications.create(`lab-${result.patientName}-${result.at}`, {
     type: "basic",
     iconUrl: "icon128.png",
-    title: `새 검사결과 · ${result.patientName}`,
+    title: `새 기타검사 결과 확인 필요 · ${result.patientName}`,
     message: lines.join("\n"),
-    priority: 2
+    contextMessage: "Lab Summary Monitor",
+    priority: 2,
+    requireInteraction: true,
+    buttons: [{ title: "SRMS 열기" }]
   });
+}
+
+function notificationToView(result) {
+  const view = {
+    id: result.chartNo || result.patientName || "unknown",
+    name: result.patientName || "환자 미확인",
+    chartNo: result.chartNo || "",
+    recentDate: "",
+    previousDate: "",
+    isNewToday: true,
+    lab: "",
+    ua: "",
+    sputum: [],
+    stool: [],
+    vreCre: [],
+    bloodCulture: [],
+    unclassified: []
+  };
+
+  for (const item of result.items || []) {
+    const date = item.performedDate || item.date || "";
+    if (!view.recentDate) view.recentDate = String(date).replaceAll("-", "").slice(0, 8);
+    const text = `${item.name || ""} ${item.sample || ""}`;
+    const summary = { date, name: item.name || "", result: item.result || "" };
+    if (/stool|feces|faeces/i.test(text)) view.stool.push(summary);
+    else if (/\b(?:vre|cre)\b|rectal|enterococcus/i.test(text)) view.vreCre.push(summary);
+    else if (/blood\s*culture/i.test(text)) view.bloodCulture.push(summary);
+    else view.sputum.push(summary);
+  }
+
+  return view;
+}
+
+async function openNotificationView(index) {
+  const store = await loadStore();
+  const result = (store.notifications || [])[Number(index)];
+  if (!result) return { ok: false, error: "notification-not-found" };
+  const view = result.view || notificationToView(result);
+  await saveStore({
+    lastLookupView: {
+      generatedAt: new Date().toISOString(),
+      patients: [view]
+    }
+  });
+  await openViewerWindow();
+  return { ok: true };
+}
+
+function srmsDisplayDate(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length === 8 ? digits : String(value || "");
+}
+
+function srmsDetailUrl(target) {
+  const url = new URL(SRMS_RESULT_URL);
+  url.searchParams.set("labOpen", "1");
+  url.searchParams.set("labDat", srmsDisplayDate(target.dat));
+  url.searchParams.set("labJno", String(target.jno || ""));
+  if (target.chn) url.searchParams.set("labChn", String(target.chn));
+  if (target.hos) url.searchParams.set("labHos", String(target.hos));
+  return url.toString();
+}
+
+async function openNotificationDetail(index) {
+  const store = await loadStore();
+  const result = (store.notifications || [])[Number(index)];
+  if (!result) return { ok: false, error: "notification-not-found" };
+  const target = (result.detailTargets || []).find((item) => item?.dat && item?.jno);
+  if (!target) {
+    return openNotificationView(index);
+  }
+  const tab = await chrome.tabs.create({ url: srmsDetailUrl(target), active: true });
+  return { ok: true, tabId: tab.id };
 }
 
 // --- 점검 실행 + 알림 ---
@@ -77,6 +159,20 @@ async function checkAndNotify() {
       message: "감시를 계속하려면 SRMS 에 다시 로그인하세요.",
       priority: 1
     });
+  }
+  return res;
+}
+
+async function runOtherLookup(names, limit = 3, days = 30) {
+  const store = await loadStore();
+  const targetNames = names?.length ? names : store.watchlist;
+  if (!targetNames.length) return { status: "empty", views: [], failures: [] };
+  const res = await collectRecentOtherViews(store.templates, targetNames, limit, days);
+  res.at = Date.now();
+  await saveStore({ lastOtherLookup: res });
+  if (res.status === "ok" && res.views?.length) {
+    await saveStore({ lastLookupView: { generatedAt: new Date().toISOString(), patients: res.views } });
+    await openViewerWindow();
   }
   return res;
 }
@@ -136,8 +232,7 @@ async function openViewerWindow() {
   await chrome.storage.local.set({ viewerWindowId: win.id });
 }
 
-// 알림 클릭 → SRMS 탭 열기/포커스
-chrome.notifications.onClicked.addListener(() => {
+function focusSrmsTab() {
   chrome.tabs.query({ url: "https://srms.seegenemedical.com/*" }, (tabs) => {
     if (tabs.length) {
       chrome.tabs.update(tabs[0].id, { active: true });
@@ -146,7 +241,11 @@ chrome.notifications.onClicked.addListener(() => {
       chrome.tabs.create({ url: "https://srms.seegenemedical.com/main.do" });
     }
   });
-});
+}
+
+// 알림 클릭 → SRMS 탭 열기/포커스
+chrome.notifications.onClicked.addListener(focusSrmsTab);
+chrome.notifications.onButtonClicked.addListener(focusSrmsTab);
 
 // 메시지 종류별 처리. 항상 응답 객체를 반환한다(예외는 리스너에서 잡아 error 응답으로).
 async function handleMessage(msg) {
@@ -161,6 +260,12 @@ async function handleMessage(msg) {
     }
     case "checkNow":
       return checkAndNotify();
+    case "otherLookup":
+      return runOtherLookup(msg.names || [], msg.limit || 3, msg.days || 30);
+    case "openNotificationView":
+      return openNotificationView(msg.index);
+    case "openNotificationDetail":
+      return openNotificationDetail(msg.index);
     case "bloodLookup": {
       const res = await runBloodLookup(msg.names || [], msg.days || 60);
       res.reqId = msg.reqId || null;

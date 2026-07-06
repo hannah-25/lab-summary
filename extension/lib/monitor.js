@@ -1,6 +1,7 @@
 // 감시 핵심 로직: STS 상태 diff 로 신규 결과를 찾아 요약한다.
 import { extractLabRows } from "./extract.js";
-import { summarizeRows } from "./classify.js";
+import { otherTestRows, summarizeRows } from "./classify.js";
+import { buildPatientView } from "./report.js";
 import { searchPatient, fetchDetail, hasResult, DETAIL_URL, LoginRequiredError } from "./srms.js";
 
 const STORE_DEFAULTS = {
@@ -11,6 +12,7 @@ const STORE_DEFAULTS = {
   lastCheck: null,      // { at, ok, error }
   unread: 0,            // 미확인 알림 개수 (배지)
   lastLookup: null,     // 마지막 혈액/UA 조회 결과 (응답 유실 복구용)
+  lastOtherLookup: null, // 마지막 기타검사 조회 결과
   lastLookupView: null  // 뷰어(viewer.html)용 구조화 데이터
 };
 
@@ -33,11 +35,91 @@ function isNewResult(prev, row) {
   return prev !== now;                  // 1→2, 1→4, 4→2 등
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function ymd(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}${m}${d}`;
+}
+
+function sortNewest(rows) {
+  return [...rows].sort((a, b) => String(b.DAT || "").localeCompare(String(a.DAT || "")));
+}
+
+function isOtherTestRow(resultRow) {
+  const etcinf = String(resultRow.ETCINF || "");
+  return !etcinf || /sputum|stool|blood culture|rectal swab|vre|cre/i.test(etcinf);
+}
+
+async function fetchOtherRows(detailTemplate, resultRow) {
+  const payload = await fetchDetail(detailTemplate, resultRow);
+  return otherTestRows(extractLabRows(payload, DETAIL_URL));
+}
+
+async function collectRecentOtherRows(detailTemplate, rows, limit = 3) {
+  const collected = [];
+  const found = new Set();
+  for (const row of sortNewest(rows)) {
+    if (found.size >= limit) break;
+    if (!hasResult(row) || !isOtherTestRow(row)) continue;
+    try {
+      const otherRows = await fetchOtherRows(detailTemplate, row);
+      if (otherRows.length) {
+        found.add(String(row.JNO));
+        collected.push(...otherRows);
+      }
+    } catch (error) {
+      if (error instanceof LoginRequiredError) throw error;
+    }
+    await sleep(300);
+  }
+  return collected;
+}
+
+export async function collectRecentOtherViews(templates, names, limit = 3, days = 30) {
+  if (!templates?.list) return { status: "no-template", views: [], failures: [] };
+  const toDate = ymd(new Date());
+  const from = new Date();
+  from.setDate(from.getDate() - days);
+  const listTemplate = {
+    ...templates.list,
+    I_FDT: ymd(from),
+    I_TDT: toDate,
+    I_CNT: "1000",
+    I_ICNT: "1000"
+  };
+  const views = [];
+  const failures = [];
+  try {
+    for (const name of names) {
+      const { rows, keyword } = await searchPatient(listTemplate, name);
+      if (!rows.length) {
+        failures.push(name);
+        continue;
+      }
+      const viewRows = await collectRecentOtherRows(templates.detail, rows, limit);
+      if (!viewRows.length) {
+        failures.push(name);
+        continue;
+      }
+      const view = buildPatientView(viewRows, { includeOtherDates: true, otherMaxDates: limit });
+      view.lookupKeyword = keyword;
+      views.push(view);
+    }
+  } catch (error) {
+    if (error instanceof LoginRequiredError) return { status: "login-required", views, failures };
+    return { status: "error", views, failures, error: error.message };
+  }
+  return { status: "ok", views, failures };
+}
+
 /**
  * 감시 대상 환자들을 1회 점검한다.
  * @returns {{ status, checked, newResults, error }}
  *   status: "ok" | "no-template" | "login-required" | "empty"
- *   newResults: [{ patientName, chartNo, items: [{date,name,sample,result}] }]
+ *   newResults: [{ patientName, chartNo, items: [{date,name,sample,result}], view }]
  */
 export async function runCheck() {
   const store = await loadStore();
@@ -71,23 +153,34 @@ export async function runCheck() {
 
       const items = [];
       let chartNo = "";
+      const detailTargets = [];
       for (const row of candidates) {
         try {
-          const payload = await fetchDetail(store.templates.detail, row);
-          const extracted = extractLabRows(payload, DETAIL_URL);
-          const summary = summarizeRows(extracted); // 혈액/UA 제외됨
+          const otherRows = await fetchOtherRows(store.templates.detail, row);
+          const summary = summarizeRows(otherRows); // 혈액/UA 제외됨
           if (summary.length) {
             items.push(...summary);
             chartNo = chartNo || String(row.CHN || "");
+            detailTargets.push({
+              dat: String(row.DAT || ""),
+              jno: String(row.JNO || ""),
+              chn: String(row.CHN || ""),
+              hos: String(row.HOS || "")
+            });
           }
         } catch (error) {
           if (error instanceof LoginRequiredError) throw error;
           // 개별 상세 실패는 건너뜀
         }
-        await new Promise((r) => setTimeout(r, 300));
+        await sleep(300);
       }
 
-      if (items.length) newResults.push({ patientName: name, chartNo, items });
+      if (items.length) {
+        const viewRows = await collectRecentOtherRows(store.templates.detail, rows, 3);
+        const view = buildPatientView(viewRows, { includeOtherDates: true, otherMaxDates: 3 });
+        view.isNewToday = true;
+        newResults.push({ patientName: name, chartNo, items, view, detailTargets });
+      }
     }
   } catch (error) {
     await saveStore({ seen, lastCheck: { at: Date.now(), ok: false, error: "login-required" } });
@@ -97,13 +190,13 @@ export async function runCheck() {
     return { status: "error", checked: 0, newResults: [], error: error.message };
   }
 
-  // 신규 결과를 알림 기록에 누적 (최근 50건 유지)
+  // 마지막 점검에서 새로 감지된 결과만 팝업에 표시한다.
   const stamped = newResults.map((r) => ({ ...r, at: Date.now() }));
-  const notifications = [...stamped, ...store.notifications].slice(0, 50);
+  const notificationRows = stamped;
 
   await saveStore({
     seen,
-    notifications,
+    notifications: notificationRows,
     lastCheck: { at: Date.now(), ok: true, error: null }
   });
 

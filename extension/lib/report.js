@@ -54,27 +54,39 @@ function yesterday() {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function rowDate(row) {
+  const date = String(row.date || row.accessionDate || "").replaceAll("-", "");
+  return /^\d{8}$/.test(date) ? date : "";
+}
+
+function rowDates(rows) {
+  return [...new Set(rows.map(rowDate).filter(Boolean))].sort().reverse();
+}
+
 // 뷰어(viewer.html)용 환자 구조체. (report.mjs buildPatientView 의 blood 모드 이식)
-export function buildPatientView(rows) {
+export function buildPatientView(rows, { includeOtherDates = false, otherMaxDates = 1 } = {}) {
   const groups = classifyRows(rows);
   const identity = rows.find((row) => row.patientName || row.chartNo) ?? {};
   const blood = splitRecentAndPrevious(groups.blood);
   const urine = splitRecentAndPrevious(groups.urine);
+  const dates = rowDates(rows);
+  const recentDate = blood.recentDate || (includeOtherDates ? dates[0] : "") || "";
+  const previousDate = blood.previousDate || (!blood.recentDate && includeOtherDates ? dates[1] : "") || "";
   return {
     id: identity.chartNo || identity.patientJno || identity.patientName || "unknown",
     name: identity.patientName || "환자 미확인",
     chartNo: identity.chartNo || "",
-    recentDate: blood.recentDate,
-    previousDate: blood.previousDate,
-    isNewToday: blood.recentDate === yesterday(),
+    recentDate,
+    previousDate,
+    isNewToday: recentDate === yesterday(),
     lab: groups.blood.length ? buildBloodSummary(blood.previousRows, blood.recentRows) : "",
     ua: groups.urine.length ? buildUaSummary(urine.previousRows, urine.recentRows) : "",
     labRecent: groups.blood.length ? buildBloodSummaryRecent(blood.recentRows) : "",
     uaRecent: groups.urine.length ? buildUaSummaryRecent(urine.recentRows) : "",
-    sputum: microItems(groups.sputum),
-    stool: microItems(groups.stool),
-    vreCre: microItems(groups.vre, { maxDates: 3 }),
-    bloodCulture: microItems(groups.bloodCulture),
+    sputum: microItems(groups.sputum, { maxDates: otherMaxDates }),
+    stool: microItems(groups.stool, { maxDates: otherMaxDates }),
+    vreCre: microItems(groups.vre, { maxDates: Math.max(3, otherMaxDates) }),
+    bloodCulture: microItems(groups.bloodCulture, { maxDates: otherMaxDates }),
     unclassified: groups.unclassified.map((row) => ({
       date: row.date || row.accessionDate || "",
       name: row.name,

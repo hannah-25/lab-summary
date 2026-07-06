@@ -18,15 +18,24 @@
     </div>
     <div id="status" class="status"></div>
 
+    <h2>최근 새 결과</h2>
+    <div id="results" class="results"></div>
+
+    <h2>기타검사 조회</h2>
+    <div class="add-row">
+      <label class="days">최근
+        <input id="otherLookupDays" type="number" min="1" max="365" value="30" /> 일
+      </label>
+      <button id="otherLookupBtn" class="primary">최근 3개 뷰어 열기</button>
+    </div>
+    <div id="otherLookupStatus" class="status" hidden></div>
+
     <h2>감시 환자</h2>
     <div class="add-row">
       <input id="nameInput" type="text" placeholder="환자 이름 (예: 홍길동2)" />
       <button id="addBtn">추가</button>
     </div>
     <ul id="watchlist" class="chips"></ul>
-
-    <h2>최근 새 결과</h2>
-    <div id="results" class="results"></div>
   </div>
 
   <!-- 혈액/UA 조회 탭 -->
