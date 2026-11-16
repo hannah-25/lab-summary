@@ -25,14 +25,23 @@ export async function saveStore(patch) {
   await chrome.storage.local.set(patch);
 }
 
-// prev(이전 STS) → now(현재 STS) 전이가 "새로 알릴 결과" 인지 판정.
-// 최초 관찰(prev === undefined)은 baseline 으로 처리하고 알리지 않는다.
-function isNewResult(prev, row) {
+// 감시 조회 기간. AFB 배양은 최종 보고까지 6~8주 걸리므로 넉넉히 잡는다.
+const WATCH_DAYS = 60;
+// 감시 중인 환자에게 처음 보이는 접수라도 이 기간 안에 접수됐으면 새 결과로 알린다
+// (점검 사이에 바로 완료된 접수 등). 그보다 오래된 접수는 기준값으로만 기록한다.
+// ponytail: 고정 일수 기준. 크롬을 이보다 오래 꺼두면 그 사이 완료된 접수는 알리지 않는다.
+const NEW_JNO_DAYS = 7;
+
+// prev(이전 STS) → row.STS 전이가 "새로 알릴 결과" 인지 판정.
+// prev === undefined 는 이 환자 감시 중 처음 보는 접수. recentSince(YYYYMMDD) 이후 접수만 알린다.
+export function isNewResult(prev, row, recentSince) {
   if (!hasResult(row)) return false;
-  const now = String(row.STS);
-  if (prev === undefined) return false; // baseline
+  if (prev === undefined) {
+    const dat = String(row.DAT || "").replace(/\D/g, "").slice(0, 8);
+    return /^\d{8}$/.test(dat) && dat >= recentSince;
+  }
   if (prev === "2") return false;       // 이미 완료 상태였음
-  return prev !== now;                  // 1→2, 1→4, 4→2 등
+  return prev !== String(row.STS);      // 1→2, 1→4, 4→2 등
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -42,6 +51,17 @@ function ymd(date) {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}${m}${d}`;
+}
+
+function daysAgo(days) {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return ymd(d);
+}
+
+// 캡처한 목록 양식의 조회 기간(I_FDT/I_TDT)은 캡처 시점에 고정돼 있으므로 오늘 기준으로 덮어쓴다.
+function listTemplateFor(list, days) {
+  return { ...list, I_FDT: daysAgo(days), I_TDT: daysAgo(0), I_CNT: "1000", I_ICNT: "1000" };
 }
 
 function sortNewest(rows) {
@@ -80,16 +100,7 @@ async function collectRecentOtherRows(detailTemplate, rows, limit = 3) {
 
 export async function collectRecentOtherViews(templates, names, limit = 3, days = 30) {
   if (!templates?.list) return { status: "no-template", views: [], failures: [] };
-  const toDate = ymd(new Date());
-  const from = new Date();
-  from.setDate(from.getDate() - days);
-  const listTemplate = {
-    ...templates.list,
-    I_FDT: ymd(from),
-    I_TDT: toDate,
-    I_CNT: "1000",
-    I_ICNT: "1000"
-  };
+  const listTemplate = listTemplateFor(templates.list, days);
   const views = [];
   const failures = [];
   try {
@@ -130,20 +141,22 @@ export async function runCheck() {
     return { status: "empty", checked: 0, newResults: [] };
   }
 
+  const listTemplate = listTemplateFor(store.templates.list, WATCH_DAYS);
+  const recentSince = daysAgo(NEW_JNO_DAYS);
   const seen = { ...store.seen };
   const newResults = [];
 
   try {
     for (const name of store.watchlist) {
-      const { rows } = await searchPatient(store.templates.list, name);
-      const patientSeen = { ...(seen[name] || {}) };
+      const { rows } = await searchPatient(listTemplate, name);
       const firstTime = seen[name] === undefined;
+      const before = seen[name] || {};
+      const patientSeen = { ...before };
       const candidates = [];
 
       for (const row of rows) {
         const jno = String(row.JNO);
-        const prev = firstTime ? undefined : patientSeen[jno];
-        if (isNewResult(prev, row)) candidates.push(row);
+        if (!firstTime && isNewResult(before[jno], row, recentSince)) candidates.push(row);
         patientSeen[jno] = String(row.STS);
       }
       seen[name] = patientSeen;
@@ -170,7 +183,10 @@ export async function runCheck() {
           }
         } catch (error) {
           if (error instanceof LoginRequiredError) throw error;
-          // 개별 상세 실패는 건너뜀
+          // 개별 상세 실패: 이 접수의 상태를 되돌려 다음 점검에서 다시 감지되게 한다.
+          const jno = String(row.JNO);
+          if (before[jno] === undefined) delete patientSeen[jno];
+          else patientSeen[jno] = before[jno];
         }
         await sleep(300);
       }
@@ -183,7 +199,8 @@ export async function runCheck() {
       }
     }
   } catch (error) {
-    await saveStore({ seen, lastCheck: { at: Date.now(), ok: false, error: "login-required" } });
+    // seen 은 저장하지 않는다: 이번 점검에서 감지했지만 알리지 못한 결과를 다음 점검에서 다시 잡기 위해.
+    await saveStore({ lastCheck: { at: Date.now(), ok: false, error: "login-required" } });
     if (error instanceof LoginRequiredError) {
       return { status: "login-required", checked: 0, newResults: [] };
     }

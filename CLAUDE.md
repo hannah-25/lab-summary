@@ -9,7 +9,7 @@
 ## 검증 명령어
 
 ```powershell
-node extension\verify.mjs   # 추출·필터·감시(monitor) 로직 검증 (자체 픽스처 사용)
+node extension\verify.mjs   # 추출·필터·감시(monitor)·검사일 표시 검증. 1번 섹션은 %LOCALAPPDATA%\TrinityLabSummary\raw\ 의 실제 캡처 필요, 나머지는 자체 픽스처/가짜 chrome·fetch
 ```
 
 CLI와의 출력 패리티를 검증하던 `verify-blood.mjs`/`verify-view.mjs`는 이식 완료 후 `legacy-pipeline` 브랜치로 보냈습니다 (로컬 raw 캡처 + CLI 코드 필요).
@@ -36,7 +36,7 @@ CLI와의 출력 패리티를 검증하던 `verify-blood.mjs`/`verify-view.mjs`�
 | `popup.html/js/css` | 2탭 UI (감시 환자 관리 / 혈액·UA 조회) |
 | `viewer.html/js/css` | 혈액/UA 결과 뷰어 창. 편집 가능, "전체 결과 생성"으로 복사 |
 | `lib/srms.js` | fetch 기반 목록/상세 조회, STS(검사 상태) 판정 |
-| `lib/monitor.js` | STS diff로 신규 결과 판정, 기준선 저장 (최초 관찰은 알림 없음) |
+| `lib/monitor.js` | STS diff로 신규 결과 판정, 기준선 저장. 조회 기간은 오늘 기준 `WATCH_DAYS`(60일)로 덮어씀. 환자 첫 감시는 알림 없음, 감시 중 새로 보인 접수는 `NEW_JNO_DAYS`(7일) 이내 접수면 알림. 점검 중 오류 시 `seen` 미저장(다음 점검에서 재감지) |
 | `lib/lookup.js` | 혈액/UA 온디맨드 수집 |
 | `lib/extract.js` | 상세 응답의 중첩 JSON → 검사 행 추출 |
 | `lib/classify.js` | 행 분류 + 감시용 혈액/UA 제외 필터 |
