@@ -270,7 +270,7 @@ $("lookupBtn").addEventListener("click", async () => {
       $("lookupOut").textContent = reports.join("\n\n--------------------\n\n");
       const fail = failures.length ? ` · 검색 실패 ${failures.length}명(${failures.join(", ")})` : "";
       const print = res.srmsPrint;
-      const printStatus = print ? ` · SRMS ${print.opened}개 창 열림 (진행 상황은 각 창에서 확인)` : "";
+      const printStatus = print ? ` · SRMS ${print.opened}명 인쇄 진행 (성공 시 검색 창 자동 닫힘)` : "";
       const printFail = print?.failures.length ? ` · 창 열기 실패: ${print.failures.join(", ")}` : "";
       setLookupStatus(`완료 · ${reports.length}명${fail}${printStatus}${printFail}`, failures.length || print?.failures.length ? "warn" : "");
     }

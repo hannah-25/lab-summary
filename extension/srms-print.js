@@ -135,6 +135,7 @@
       if (!opened) throw new Error("인쇄창이 열리지 않았습니다. SRMS 팝업을 허용한 뒤 결과지의 인쇄 아이콘을 눌러주세요.");
     }
     status.textContent = `${name} · ${target.DAT} 결과지 ${reports.length}건 인쇄 요청 완료. 최종 출력은 인쇄창에서 확인하세요.`;
+    window.close();
   } catch (error) {
     if (status) { status.setAttribute("role", "alert"); status.textContent = error.message; }
     console.error("[LabMonitor] SRMS 인쇄:", error);
