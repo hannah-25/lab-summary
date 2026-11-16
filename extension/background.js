@@ -192,12 +192,14 @@ async function runBloodLookup(names, days = 60) {
   const allRows = [];
   const failures = [];
   try {
-    for (const name of names) {
-      const { rows, found } = await collectBloodUa(store.templates, name, { fromDate, toDate });
-      console.log(`[LabMonitor]  ${name}: found=${found}, rows=${rows.length}`);
-      if (!found) failures.push(name);
+    // 환자끼리는 동시에 조회한다. 한 환자 안의 상세 조회는 기존처럼 순차 + 300ms 간격.
+    // ponytail: 동시 요청 수 제한 없음 — 환자 수가 수십 명으로 늘어 SRMS가 거부하면 묶음 단위로 나눌 것
+    const results = await Promise.all(names.map((name) => collectBloodUa(store.templates, name, { fromDate, toDate })));
+    results.forEach(({ rows, found }, index) => {
+      console.log(`[LabMonitor]  ${names[index]}: found=${found}, rows=${rows.length}`);
+      if (!found) failures.push(names[index]);
       allRows.push(...rows);
-    }
+    });
   } catch (error) {
     console.log("[LabMonitor] bloodLookup 예외:", error);
     if (error instanceof LoginRequiredError) return { status: "login-required", reports: [], failures };
@@ -230,6 +232,23 @@ async function openViewerWindow() {
   }
   const win = await chrome.windows.create({ url, type: "popup", width: 1200, height: 900 });
   await chrome.storage.local.set({ viewerWindowId: win.id });
+}
+
+async function openSrmsPrintWindows(names, days) {
+  const to = ymd(new Date());
+  const from = new Date();
+  from.setDate(from.getDate() - days);
+  const failures = [];
+  let opened = 0;
+  for (const name of [...new Set(names.map((name) => name.trim()).filter(Boolean))]) {
+    // 이름은 fragment로 전달해 main.do 요청과 서버 로그에 포함되지 않게 한다.
+    const params = new URLSearchParams({ labPrint: "1", name, from: ymd(from), to });
+    try {
+      await chrome.windows.create({ url: `https://srms.seegenemedical.com/main.do#${params}`, type: "normal", width: 1200, height: 900, focused: false });
+      opened += 1;
+    } catch { failures.push(name); }
+  }
+  return { opened, failures };
 }
 
 function focusSrmsTab() {
@@ -267,15 +286,18 @@ async function handleMessage(msg) {
     case "openNotificationDetail":
       return openNotificationDetail(msg.index);
     case "bloodLookup": {
+      // SRMS 인쇄 창은 이름·기간만으로 스스로 검색하므로 혈액/UA 조회를 기다리지 않고 동시에 띄운다.
+      const printing = openSrmsPrintWindows(msg.names || [], msg.days || 60);
       const res = await runBloodLookup(msg.names || [], msg.days || 60);
       res.reqId = msg.reqId || null;
       res.at = Date.now();
-      await saveStore({ lastLookup: res }); // 응답 유실 대비 복구용 (팝업이 폴링으로 회수)
       // 조회 성공 시 뷰어 데이터 저장 + 새 창 자동 오픈
       if (res.status === "ok" && res.views?.length) {
         await saveStore({ lastLookupView: { generatedAt: new Date().toISOString(), patients: res.views } });
         await openViewerWindow();
       }
+      res.srmsPrint = await printing;
+      await saveStore({ lastLookup: res }); // 응답 유실 대비 복구용 (팝업이 폴링으로 회수)
       return res;
     }
     case "openViewer":

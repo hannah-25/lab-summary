@@ -269,13 +269,16 @@ $("lookupBtn").addEventListener("click", async () => {
       const failures = res.failures || [];
       $("lookupOut").textContent = reports.join("\n\n--------------------\n\n");
       const fail = failures.length ? ` · 검색 실패 ${failures.length}명(${failures.join(", ")})` : "";
-      setLookupStatus(`완료 · ${reports.length}명${fail}`, failures.length ? "warn" : "");
+      const print = res.srmsPrint;
+      const printStatus = print ? ` · SRMS ${print.opened}개 창 열림 (진행 상황은 각 창에서 확인)` : "";
+      const printFail = print?.failures.length ? ` · 창 열기 실패: ${print.failures.join(", ")}` : "";
+      setLookupStatus(`완료 · ${reports.length}명${fail}${printStatus}${printFail}`, failures.length || print?.failures.length ? "warn" : "");
     }
   } catch (e) {
     setLookupStatus(`오류: ${e.message}`, "err");
   } finally {
     btn.disabled = false;
-    btn.textContent = "조회";
+    btn.textContent = "조회 · SRMS 인쇄";
   }
 });
 

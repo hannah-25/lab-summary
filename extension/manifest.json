@@ -16,7 +16,7 @@
   "content_scripts": [
     {
       "matches": ["https://srms.seegenemedical.com/*"],
-      "js": ["inject.js"],
+      "js": ["inject.js", "srms-print.js"],
       "run_at": "document_start",
       "world": "MAIN",
       "all_frames": true
