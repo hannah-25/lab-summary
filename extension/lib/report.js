@@ -26,7 +26,13 @@ export function uniqueRows(rows) {
   ])).values()];
 }
 
-// 환자 1명의 혈액/UA 텍스트 요약 (buildPatientReport 의 blood 모드와 동일 출력).
+// 혈액과 UA는 접수일이 다를 수 있으므로 섹션마다 자기 검사일을 붙인다.
+function withDateLine(label, split, summary) {
+  if (!split.recentDate && !split.previousDate) return summary;
+  return `${label} 검사일 : ${split.recentDate || "-"} <- ${split.previousDate || "-"}\n${summary}`;
+}
+
+// 환자 1명의 혈액/UA 텍스트 요약.
 export function buildBloodUaReport(rows) {
   const groups = classifyRows(rows);
   const identity = rows.find((row) => row.patientName || row.patientJno) ?? {};
@@ -37,11 +43,8 @@ export function buildBloodUaReport(rows) {
   const sections = [title || "환자 미확인"];
   const blood = splitRecentAndPrevious(groups.blood);
   const urine = splitRecentAndPrevious(groups.urine);
-  if (blood.recentDate || blood.previousDate) {
-    sections.push(`검사일 : ${blood.recentDate || "-"} <- ${blood.previousDate || "-"}`);
-  }
-  sections.push(buildBloodSummary(blood.previousRows, blood.recentRows));
-  sections.push(buildUaSummary(urine.previousRows, urine.recentRows));
+  sections.push(withDateLine("혈액", blood, buildBloodSummary(blood.previousRows, blood.recentRows)));
+  sections.push(withDateLine("UA", urine, buildUaSummary(urine.previousRows, urine.recentRows)));
   if (groups.unclassified.length) {
     sections.push(`미분류 : ${groups.unclassified.map((row) => `${row.name}: ${row.result}`).join("    ")}`);
   }
@@ -79,7 +82,11 @@ export function buildPatientView(rows, { includeOtherDates = false, otherMaxDate
     recentDate,
     previousDate,
     isNewToday: recentDate === yesterday(),
-    lab: groups.blood.length ? buildBloodSummary(blood.previousRows, blood.recentRows) : "",
+    labRecentDate: blood.recentDate,
+    labPreviousDate: blood.previousDate,
+    uaRecentDate: urine.recentDate,
+    uaPreviousDate: urine.previousDate,
+    lab:groups.blood.length ? buildBloodSummary(blood.previousRows, blood.recentRows) : "",
     ua: groups.urine.length ? buildUaSummary(urine.previousRows, urine.recentRows) : "",
     labRecent: groups.blood.length ? buildBloodSummaryRecent(blood.recentRows) : "",
     uaRecent: groups.urine.length ? buildUaSummaryRecent(urine.recentRows) : "",

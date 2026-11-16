@@ -36,12 +36,23 @@ function generateFinalResult() {
   $("viewerFinal").value = sections.join("\n\n");
 }
 
+// 섹션 제목용 "최근 ← 이전" (YYYYMMDD → M/D). 제목에만 표시되고 전체 결과 복사에는 안 들어간다.
+function shortDate(date) {
+  const d = String(date || "");
+  return /^\d{8}$/.test(d) ? `${Number(d.slice(4, 6))}/${Number(d.slice(6, 8))}` : "-";
+}
+
+function dateRange(recent, previous) {
+  return recent || previous ? `${shortDate(recent)} ← ${shortDate(previous)}` : "";
+}
+
 function renderPatient(index) {
   const patient = viewerPatients[index];
   if (!patient) return;
   $("viewerContent").hidden = false;
   $("viewerPatient").textContent = `${patient.name}${patient.chartNo ? ` (${patient.chartNo})` : ""}`;
-  $("viewerDates").textContent = `최근 검사 ${patient.recentDate || "-"} · 이전 검사 ${patient.previousDate || "-"}`;
+  $("viewerLabDates").textContent = dateRange(patient.labRecentDate, patient.labPreviousDate);
+  $("viewerUaDates").textContent = dateRange(patient.uaRecentDate, patient.uaPreviousDate);
   setTextForm("viewerLab", patient.lab);
   setTextForm("viewerUa", patient.ua);
   setOptionalForm("viewerSputum", patient.sputum);

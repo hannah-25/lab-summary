@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { extractLabRows } from "./lib/extract.js";
 import { classifyRows, summarizeRows, otherTestRows } from "./lib/classify.js";
 import { hasResult } from "./lib/srms.js";
+import { buildBloodUaReport, buildPatientView } from "./lib/report.js";
 
 const RAW = join(process.env.LOCALAPPDATA, "TrinityLabSummary", "raw");
 const files = [
@@ -70,6 +71,23 @@ check("중간보고→완료 → 알림", isNewResult("4", { STS: "2" }) === tru
 check("완료 유지 → 알림 안함", isNewResult("2", { STS: "2" }) === false);
 check("중간보고 유지 → 알림 안함", isNewResult("4", { STS: "4" }) === false);
 check("검사중 유지 → 알림 안함", isNewResult("1", { STS: "1" }) === false);
+
+console.log("\n=== 4. 혈액/UA 검사일 분리 표시 ===");
+{
+  const r = (dat, name, result, sample) => ({
+    patientName: "테스트", chartNo: "C1", accessionDate: dat, name, result, sample, flag: "", reference: "Negative"
+  });
+  // 11/15 혈액+UA, 11/12 UA만, 11/10 혈액만 → 혈액과 UA 의 이전 검사일이 다르다
+  const rows = [
+    r("20261115", "WBC", "12.3", "EDTA W/B"), r("20261115", "Protein", "1+", "Random Urine"),
+    r("20261112", "Protein", "2+", "Random Urine"), r("20261110", "WBC", "9.8", "EDTA W/B")
+  ];
+  const text = buildBloodUaReport(rows);
+  check("팝업 텍스트: 혈액 검사일", text.includes("혈액 검사일 : 20261115 <- 20261110\nLab 결과"));
+  check("팝업 텍스트: UA 검사일 따로", text.includes("UA 검사일 : 20261115 <- 20261112\nUA 결과"));
+  const v = buildPatientView(rows);
+  check("뷰어 데이터: 혈액/UA 날짜 분리", v.labPreviousDate === "20261110" && v.uaPreviousDate === "20261112");
+}
 
 console.log(`\n결과: ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

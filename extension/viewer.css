@@ -168,7 +168,7 @@ select {
 }
 
 .patient-banner strong { display: block; color: var(--accent-dark); font-size: 20px; }
-.patient-banner span { color: var(--muted); font-size: 13px; }
+.result-form h2 .dates { margin-left: 6px; color: var(--muted); font-size: 13px; font-weight: normal; }
 
 .result-form {
   min-width: 0;
